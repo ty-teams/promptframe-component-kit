@@ -1,6 +1,6 @@
 {
   "name": "@promptframe/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "type": "module",
   "files": [
@@ -36,7 +36,7 @@
   },
   "homepage": "https://github.com/ty-teams/promptframe-component-authoring#readme",
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm --filter @promptframe/contracts build && tsc",
     "lint": "pnpm --filter @promptframe/contracts build && tsc --noEmit",
     "test": "pnpm build && node --test test/*.test.mjs",
     "pack:dry-run": "pnpm build && npm pack --dry-run --json",
