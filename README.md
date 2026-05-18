@@ -1,8 +1,12 @@
 # PromptFrame Component Kit
 
-Public release repository for `@promptframe/component-kit`, the authoring SDK and standards helper for PromptFrame marketplace component authors.
+Public source repository for `@promptframe/component-kit`, a small TypeScript helper package for building PromptFrame-compatible Remotion components.
 
-This repository is intentionally thin. It publishes the stable component authoring kit only; marketplace/private components themselves are not distributed through npm. Component source packages and build artifacts still go through PromptFrame CLI upload, admission, security review, evidence indexing and artifact storage.
+```bash
+npm install @promptframe/component-kit
+```
+
+The package provides version stamps, preview constraints, and deterministic timing helpers. Component projects can depend on it during authoring; finished components are packaged and uploaded with the PromptFrame CLI.
 
 ## Local Checks
 
