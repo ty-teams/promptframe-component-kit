@@ -15,11 +15,12 @@ npm run validate
 npx promptframe standard
 npx promptframe doctor .
 npx promptframe validate .
+npx promptframe preview .
 npx promptframe upload . --endpoint <promptframe-api-base>
 npx promptframe status <buildId> --endpoint <promptframe-api-base>
 ```
 
-如果上传入口不可用，仍然要完成本地开发和 `validate`，然后按组件作者报告模板写清本地结果。
+如果上传入口不可用，仍然要完成本地开发、`validate` 和 `preview` envelope 检查，然后按组件作者报告模板写清本地结果。
 
 ## 必需文件
 
@@ -45,7 +46,7 @@ npx promptframe status <buildId> --endpoint <promptframe-api-base>
 
 动态数据组件可以参考 PromptFrame authoring skill 的 `rules/schema-recipes.md`，里面有增长指标、对比指标、漏斗阶段和正负 delta 的推荐 schema 写法。
 
-本地校验通过后，使用 `@promptframe/cli` 上传。
+本地校验和 preview envelope 检查通过后，使用 `@promptframe/cli` 上传。
 
 ## 安全策略
 
@@ -58,6 +59,12 @@ npx promptframe status <buildId> --endpoint <promptframe-api-base>
 - 需要素材、状态或外部数据时，让平台通过 props / asset / 后续受控 wrapper 注入。
 
 ## 上传与状态
+
+本地 preview envelope 检查读取 `src/preview-props.json`，确认 Remotion 预览尺寸、帧率、时长和 props 边界。它不运行自定义 runtime，也不能替代平台 iframe preview / probe / render evidence。
+
+```bash
+npx promptframe preview . --json
+```
 
 推荐直接上传组件目录：
 

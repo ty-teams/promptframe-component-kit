@@ -28,6 +28,19 @@ test('public authoring docs use buildId for platform build status commands', asy
   }
 });
 
+test('public authoring docs include the local preview command before upload', async () => {
+  for (const docPath of [
+    'README.md',
+    'packages/cli/README.md',
+    'skills/component-authoring/SKILL.md',
+    'templates/react-remotion/README.md',
+    'packages/create-component/templates/react-remotion/README.md',
+  ]) {
+    const text = await readFile(path.join(repoRoot, docPath), 'utf8');
+    assert.match(text, /promptframe preview \./, docPath);
+  }
+});
+
 test('public skill documents common diagnostics and security rule fixes', async () => {
   const skill = await readFile(path.join(repoRoot, 'skills/component-authoring/SKILL.md'), 'utf8');
   assert.match(skill, /Common Diagnostics/);

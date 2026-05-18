@@ -39,6 +39,7 @@ npm install
 npx promptframe standard
 npx promptframe doctor .
 npx promptframe validate .
+npx promptframe preview .
 npx promptframe package . --out ./my-component.zip
 ```
 
@@ -49,9 +50,9 @@ npx promptframe upload . --endpoint <promptframe-api-base>
 npx promptframe status <buildId> --endpoint <promptframe-api-base>
 ```
 
-Do not guess private service addresses. If no endpoint is provided, finish local validation and report the missing endpoint.
+Do not guess private service addresses. If no endpoint is provided, finish local validation and local preview envelope checks, then report the missing endpoint.
 
-Automation can add `--json` to `standard`, `doctor`, `validate`, `upload`, `status`, `reindex`, and `probe`. Read `diagnostic.code`, `checkedRuleIds`, `failureReason`, and `retryable` instead of scraping prose logs.
+Automation can add `--json` to `standard`, `doctor`, `validate`, `preview`, `upload`, `status`, `reindex`, and `probe`. Read `diagnostic.code`, `checkedRuleIds`, `failureReason`, and `retryable` instead of scraping prose logs.
 
 ## Component Types
 
@@ -102,6 +103,7 @@ component/
 
 - Props must be JSON serializable and described by schema.
 - `src/preview-props.json` must render a meaningful bounded preview without asking the user for extra input.
+- `promptframe preview . --json` only verifies the local Remotion preview envelope from `src/preview-props.json`; it does not replace platform iframe preview, probes, or render evidence.
 - Animation must be frame-driven with Remotion hooks and helpers.
 - Do not use CSS transitions/keyframes, timers, `Date.now()`, or `Math.random()`.
 - Use Remotion media primitives rather than browser-native media tags.

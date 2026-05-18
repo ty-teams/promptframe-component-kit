@@ -186,6 +186,42 @@ test('package validates a component folder and writes a platform zip artifact', 
   }
 });
 
+test('preview exposes a local Remotion preview envelope without a platform endpoint', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-preview-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+
+    const { stdout } = await execFileAsync('node', [
+      cliPath,
+      'preview',
+      componentDir,
+      '--json',
+    ], {
+      env: {
+        ...process.env,
+        PROMPTFRAME_API_BASE: '',
+        REMOTION_MEDIA_API_BASE: '',
+      },
+    });
+    const payload = JSON.parse(stdout);
+
+    assert.equal(payload.command, 'preview');
+    assert.equal(payload.dir, componentDir);
+    assert.equal(payload.diagnostic.code, 'preview.ready');
+    assert.equal(payload.renderingSystem, 'remotion');
+    assert.equal(payload.preview.durationFrames, 60);
+    assert.equal(payload.preview.fps, 30);
+    assert.equal(payload.preview.width, 1280);
+    assert.equal(payload.preview.height, 720);
+    assert.deepEqual(payload.preview.props, {});
+    assert.deepEqual(payload.localDevCommand, ['npm', 'run', 'dev']);
+    assert.equal(payload.previewSource, 'src/preview-props.json');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('local standard, doctor, and validate expose stable JSON diagnostics', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-local-json-'));
   try {

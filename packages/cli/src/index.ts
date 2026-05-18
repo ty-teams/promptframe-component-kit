@@ -55,6 +55,9 @@ async function run(name: string, argv: string[]): Promise<void> {
     case 'validate':
       validate(argv);
       break;
+    case 'preview':
+      preview(argv);
+      break;
     case 'package':
       packageComponent(argv);
       break;
@@ -129,6 +132,36 @@ function validate(argv: string[]): void {
     return;
   }
   console.log(`validate passed: ${dir}`);
+}
+
+function preview(argv: string[]): void {
+  const dir = resolve(firstPositionalArg(argv) ?? '.');
+  const manifest = validateComponentDirectory(dir);
+  const previewEnvelope = readPreviewProps(dir);
+  const output = {
+    command: 'preview',
+    dir,
+    manifest: {
+      id: manifest.id,
+      name: manifest.name,
+      displayName: manifest.displayName,
+      version: manifest.version,
+      componentType: manifest.componentType ?? manifest.layer,
+    },
+    renderingSystem: 'remotion',
+    previewSource: 'src/preview-props.json',
+    preview: previewEnvelope,
+    localDevCommand: ['npm', 'run', 'dev'],
+    diagnostic: diagnostic('preview.ready', 'info', 'Local Remotion preview envelope is ready.'),
+  };
+  if (hasFlag(argv, '--json')) {
+    printJson(output);
+    return;
+  }
+  console.log(`preview ready: ${dir}`);
+  console.log(`Rendering system: ${output.renderingSystem}`);
+  console.log(`Preview: ${previewEnvelope.width}x${previewEnvelope.height} @ ${previewEnvelope.fps}fps, ${previewEnvelope.durationFrames} frames`);
+  console.log('Run: npm run dev');
 }
 
 function packageComponent(argv: string[]): void {
@@ -386,8 +419,7 @@ function assertRequiredFiles(dir: string): void {
 }
 
 function validatePreviewProps(dir: string): void {
-  const previewPath = join(dir, 'src/preview-props.json');
-  const preview = asRecord(JSON.parse(readFileSync(previewPath, 'utf8')));
+  const preview = readPreviewProps(dir);
   if (!preview) {
     fail('src/preview-props.json must be a JSON object.', 'component_standard.preview.object');
   }
@@ -422,6 +454,15 @@ function validatePreviewProps(dir: string): void {
   if (!asRecord(preview.props)) {
     fail('src/preview-props.json must include a props object.', 'component_standard.preview.props.object');
   }
+}
+
+function readPreviewProps(dir: string): Record<string, unknown> {
+  const previewPath = join(dir, 'src/preview-props.json');
+  const preview = asRecord(JSON.parse(readFileSync(previewPath, 'utf8')));
+  if (!preview) {
+    fail('src/preview-props.json must be a JSON object.', 'component_standard.preview.object');
+  }
+  return preview;
 }
 
 function validateSourceSafety(dir: string): void {
@@ -751,6 +792,7 @@ Commands:
   standard                         Print current public component standard versions
   doctor <dir>                     Check required component files
   validate <dir>                   Validate manifest and basic source boundaries
+  preview <dir>                    Validate and print local Remotion preview envelope
   package <dir> --out <zip>        Validate and package a component source zip
   upload <dir|zip>                 Upload component source package to PromptFrame
   status <buildId>                 Fetch component build status
