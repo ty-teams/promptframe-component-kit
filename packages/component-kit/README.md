@@ -23,11 +23,13 @@ The package does not replace server-side admission. Uploads must still pass buil
 
 ## Publishing Status
 
-The package is publish-gated with `"private": true` until the first public publish and npm Trusted Publisher configuration are complete. The confirmed public coordinates are:
+The package is public-release ready. The confirmed public coordinates are:
 
 - npm package: `@promptframe/component-kit`
 - npm org/scope: `@promptframe`
 - release repository: `https://github.com/ty-teams/promptframe-component-kit`
 - license: MIT
+
+First publish still requires the npm account's OTP/2FA path and npm Trusted Publisher configuration; do not add an `NPM_TOKEN` secret.
 
 Marketplace/private components themselves do not publish to npm. They still move through platform CLI upload, build admission, security review, schema/policy/receipt generation, evidence indexing, artifact mirror, and resolver-backed preview/render.

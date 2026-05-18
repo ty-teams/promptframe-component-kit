@@ -24,3 +24,5 @@ Expected trusted publisher fields:
 - GitHub repo: `ty-teams/promptframe-component-kit`
 - Workflow file: `publish-component-kit.yml`
 - Environment: `npm-production`
+
+The `npm-production` GitHub environment is intentionally present so npm Trusted Publishing can bind future releases to this workflow. Do not add an `NPM_TOKEN` secret.

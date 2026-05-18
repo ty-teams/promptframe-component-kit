@@ -52,8 +52,8 @@ test('component-kit keeps Remotion and React as optional peers', () => {
   assert.equal(packageJson.peerDependenciesMeta?.remotion?.optional, true);
 });
 
-test('component-kit is still publish-gated until trusted publisher setup is confirmed', () => {
-  assert.equal(packageJson.private, true);
+test('component-kit publish metadata is open for the confirmed PromptFrame release path', () => {
+  assert.equal(packageJson.private, undefined);
   assert.equal(packageJson.publishConfig?.registry, 'https://registry.npmjs.org/');
   assert.equal(packageJson.publishConfig?.access, 'public');
   assert.equal(packageJson.publishConfig?.provenance, true);
