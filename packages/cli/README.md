@@ -1,6 +1,5 @@
 # @promptframe/cli
 
-Command line tools for PromptFrame component authoring.
+PromptFrame component authoring CLI.
 
-This `0.0.0` release is a placeholder that reserves the package name and trusted publishing route. The first functional release will start at `0.1.0`.
-
+Use it to inspect the current public standard, check component folders, validate manifests, package source archives and call platform upload/status/reindex/probe endpoints.

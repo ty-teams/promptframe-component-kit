@@ -5,9 +5,9 @@ Public source repository for PromptFrame component authoring tools.
 Current packages:
 
 - `@promptframe/component-kit`: small TypeScript helper package for building PromptFrame-compatible Remotion components.
-- `@promptframe/contracts`: placeholder for public component authoring contracts.
-- `@promptframe/cli`: placeholder for component validation, packaging and upload commands.
-- `create-promptframe-component`: placeholder for project scaffolding.
+- `@promptframe/contracts`: public component authoring contracts.
+- `@promptframe/cli`: component validation, packaging and upload commands.
+- `create-promptframe-component`: project scaffolding for component authors.
 
 ```bash
 npm install @promptframe/component-kit
@@ -38,4 +38,4 @@ Release configuration for the currently published SDK:
 
 To publish a new version, bump the package version, run local checks, push a `component-kit-vX.Y.Z` tag, and verify npm registry output after the workflow completes.
 
-The `0.0.0` releases for `@promptframe/contracts`, `@promptframe/cli`, and `create-promptframe-component` are placeholders that reserve names and publishing routes. Their functional releases will start at `0.1.0`.
+`@promptframe/contracts`, `@promptframe/cli`, and `create-promptframe-component` start functional releases at `0.1.0`.

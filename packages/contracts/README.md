@@ -1,6 +1,5 @@
 # @promptframe/contracts
 
-Public contract package for PromptFrame component authoring tools.
+Public contracts for PromptFrame component manifests, component references, diagnostics and layout capability cards.
 
-This `0.0.0` release is a placeholder that reserves the package name and trusted publishing route. The first functional release will start at `0.1.0`.
-
+This package is intentionally small and safe to consume from authoring tools, templates and platform integration code.

@@ -1,6 +1,5 @@
 # create-promptframe-component
 
-Project scaffolder for PromptFrame-compatible components.
+Create a PromptFrame-compatible Remotion component project from the standard React template.
 
-This `0.0.0` release is a placeholder that reserves the package name and trusted publishing route. The first functional release will start at `0.1.0`.
-
+The generated project has no Git remote by default. It is meant to be validated and uploaded through `@promptframe/cli`.
