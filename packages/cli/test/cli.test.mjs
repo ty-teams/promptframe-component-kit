@@ -374,6 +374,32 @@ test('validate rejects deterministic source and security policy violations', asy
   }
 });
 
+test('validate ignores tool config text when checking deterministic component source', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-source-config-text-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    await writeFile(path.join(componentDir, 'eslint.config.js'), [
+      'export default [{',
+      '  rules: {',
+      '    "no-restricted-syntax": ["error", { message: "Use remotion random(seed) instead of Math.random()." }],',
+      '  },',
+      '}];',
+    ].join('\n'));
+
+    const validate = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'validate',
+      componentDir,
+      '--json',
+    ])).stdout);
+    assert.equal(validate.command, 'validate');
+    assert.equal(validate.diagnostic.code, 'validate.completed');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('validate rejects deterministic security gate violations', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-security-policy-'));
   try {

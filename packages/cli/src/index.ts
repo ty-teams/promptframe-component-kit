@@ -496,7 +496,9 @@ function shouldScanSecurityRule(file: string, ruleId: string): boolean {
 }
 
 function isSourceSafetyScannableFile(fileName: string): boolean {
-  return /\.(tsx?|jsx?|css)$/i.test(fileName);
+  return /^src\//i.test(fileName)
+    && !/\.(test|spec)\.[cm]?(tsx?|jsx?)$/i.test(fileName)
+    && /\.(tsx?|jsx?|css)$/i.test(fileName);
 }
 
 function isSecurityScannableFile(fileName: string): boolean {
