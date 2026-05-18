@@ -1,6 +1,6 @@
 {
   "name": "@promptframe/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "type": "module",
   "files": [
@@ -39,6 +39,7 @@
     "build": "tsc",
     "lint": "pnpm --filter @promptframe/contracts build && tsc --noEmit",
     "test": "pnpm build && node --test test/*.test.mjs",
+    "pack:dry-run": "pnpm build && npm pack --dry-run --json",
     "clean": "rm -rf dist"
   },
   "dependencies": {

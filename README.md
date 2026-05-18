@@ -37,24 +37,25 @@ For automation, add `--json` to `standard`, `doctor`, `validate`, `upload`, `sta
 ```bash
 pnpm install --frozen-lockfile
 pnpm lint:public
-pnpm --filter @promptframe/cli test
-pnpm --filter @promptframe/component-kit test
-pnpm --filter @promptframe/component-kit lint
-pnpm --filter @promptframe/component-kit build
-cd packages/component-kit && npm pack --dry-run --json
+pnpm -r test
+pnpm -r build
+pnpm -r lint
+pnpm -r pack:dry-run
 ```
 
 ## Releases
 
 PromptFrame authoring packages are published to the public npm registry. Releases are signed through npm Trusted Publishing from GitHub Actions.
 
-Release configuration for the currently published SDK:
+Release configuration:
 
-- npm package: `@promptframe/component-kit`
 - GitHub repo: `ty-teams/promptframe-component-authoring`
-- Workflow file: `publish-component-kit.yml`
 - Environment: `npm-production`
+- `@promptframe/component-kit`: workflow `publish-component-kit.yml`, tag `component-kit-vX.Y.Z`
+- `@promptframe/contracts`: workflow `publish-contracts.yml`, tag `contracts-vX.Y.Z`
+- `@promptframe/cli`: workflow `publish-cli.yml`, tag `cli-vX.Y.Z`
+- `create-promptframe-component`: workflow `publish-create-component.yml`, tag `create-component-vX.Y.Z`
 
-To publish a new version, bump the package version, run local checks, push a `component-kit-vX.Y.Z` tag, and verify npm registry output after the workflow completes.
+To publish a new version, bump the package version, run local checks, push the matching package tag, and verify npm registry output after the workflow completes.
 
-`@promptframe/contracts`, `@promptframe/cli`, and `create-promptframe-component` start functional releases at `0.1.0`.
+Current registry baseline: `@promptframe/contracts@0.1.1`, `@promptframe/component-kit@0.1.3`, `create-promptframe-component@0.1.1`. `@promptframe/cli@0.1.1` is the next release candidate for real remote transport and stable JSON failure diagnostics.

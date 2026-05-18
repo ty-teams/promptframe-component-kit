@@ -49,6 +49,7 @@
     "build": "tsc",
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
+    "pack:dry-run": "pnpm build && npm pack --dry-run --json",
     "clean": "rm -rf dist"
   },
   "dependencies": {},
