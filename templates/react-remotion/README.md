@@ -16,7 +16,7 @@ npx promptframe standard
 npx promptframe doctor .
 npx promptframe validate .
 npx promptframe upload . --endpoint <promptframe-api-base>
-npx promptframe status <jobId> --endpoint <promptframe-api-base>
+npx promptframe status <buildId> --endpoint <promptframe-api-base>
 ```
 
 如果上传入口不可用，仍然要完成本地开发和 `validate`，然后按组件作者报告模板写清本地结果。
@@ -72,7 +72,7 @@ npx promptframe upload . --endpoint <promptframe-api-base>
 查看构建验收状态：
 
 ```bash
-npx promptframe status <jobId> --endpoint <promptframe-api-base>
+npx promptframe status <buildId> --endpoint <promptframe-api-base>
 ```
 
 上传成功只代表服务端已接收源码并执行构建验收，不等于组件已经公开发布。
@@ -80,7 +80,7 @@ npx promptframe status <jobId> --endpoint <promptframe-api-base>
 如果平台提示预览资产是平台环境问题，平台维护者修复后可重新生成预览：
 
 ```bash
-npx promptframe reindex <jobId> --endpoint <promptframe-api-base>
+npx promptframe reindex <buildId> --endpoint <promptframe-api-base>
 ```
 
 ## 组件包边界

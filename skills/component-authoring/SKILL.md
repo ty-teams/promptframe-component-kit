@@ -46,7 +46,7 @@ To upload, the caller must provide the current platform endpoint:
 
 ```bash
 npx promptframe upload . --endpoint <promptframe-api-base>
-npx promptframe status <jobId> --endpoint <promptframe-api-base>
+npx promptframe status <buildId> --endpoint <promptframe-api-base>
 ```
 
 Do not guess private service addresses. If no endpoint is provided, finish local validation and report the missing endpoint.
@@ -108,6 +108,17 @@ component/
 - Do not import files outside the component directory.
 - Do not access browser storage, cookies, clipboard, camera, microphone, filesystem, process env, or child processes.
 - Do not use raw `fetch`, XHR, WebSocket, Beacon, or remote script imports unless the platform provides an explicit mediated API and allowlist.
+
+## Common Diagnostics
+
+When `promptframe validate --json` or platform admission returns one of these diagnostics, fix source code rather than editing metadata or search text:
+
+- `doctor.required_files.missing`: restore `manifest.json`, `package.json`, `src/Component.tsx`, `src/schema.ts`, `src/index.ts`, and `src/preview-props.json`.
+- `component_standard.source.no_math_random`: replace `Math.random()` with props, frame-derived values, or Remotion `random(seed)`.
+- `code.eval`, `code.new_function`, `code.string_timer`: remove dynamic string execution; component logic must be deterministic TypeScript/React code.
+- `network.raw_fetch`: remove raw `fetch`, XHR, WebSocket, EventSource, or Beacon calls unless the platform provides a mediated allowlisted API.
+- `prompt.injection_string`: remove comments, README text, or strings that ask the platform to ignore rules, rank the component first, auto-approve, or change admission behavior.
+- `network.remote_url`: move hardcoded remote assets into platform asset intake or props; do not bake remote URLs into component source.
 
 ## What Director May Use
 
