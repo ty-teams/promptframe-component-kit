@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
+import { inflateRawSync } from 'node:zlib';
 import {
   COMPONENT_MANIFEST_SCHEMA_VERSION,
   COMPONENT_REF_VERSION,
@@ -380,7 +381,7 @@ async function uploadComponent(argv: string[]): Promise<void> {
   const target = resolve(argv[0] ?? '.');
   const uploadTarget = resolveUploadTarget(argv);
   const artifact = target.endsWith('.zip')
-    ? packageArtifactFromZip(target)
+    ? packageZipForUpload(target, uploadTarget)
     : packageDirectoryForUpload(target, uploadTarget, valueAfter(argv, '--out'));
   const endpoint = resolveEndpoint('upload', argv);
   const file = readFileSync(artifact.out);
@@ -424,6 +425,13 @@ function resolveUploadTarget(argv: string[]): AuthoringUploadTarget {
 
 function assertAuthoringPackageFreshness(dir: string, target: AuthoringUploadTarget): void {
   const diagnostics = computePackageFreshnessDiagnostics(readPackageManifest(join(dir, 'package.json')), target);
+  if (diagnostics.length === 0) return;
+  fail(formatPackageFreshnessFailure(diagnostics, target), diagnostics[0]!.code);
+}
+
+function assertAuthoringZipPackageFreshness(path: string, target: AuthoringUploadTarget): void {
+  const packageJson = readPackageManifestFromZip(path);
+  const diagnostics = computePackageFreshnessDiagnostics(packageJson, target);
   if (diagnostics.length === 0) return;
   fail(formatPackageFreshnessFailure(diagnostics, target), diagnostics[0]!.code);
 }
@@ -774,6 +782,11 @@ function normalizeLegacyManifest(input: Record<string, unknown>): Record<string,
   return input;
 }
 
+function packageZipForUpload(path: string, uploadTarget: AuthoringUploadTarget): { out: string; sizeBytes: number; sha256: string } {
+  assertAuthoringZipPackageFreshness(path, uploadTarget);
+  return packageArtifactFromZip(path);
+}
+
 function packageArtifactFromZip(path: string): { out: string; sizeBytes: number; sha256: string } {
   const file = readFileSync(path);
   return {
@@ -781,6 +794,68 @@ function packageArtifactFromZip(path: string): { out: string; sizeBytes: number;
     sizeBytes: file.byteLength,
     sha256: `sha256:${createHash('sha256').update(file).digest('hex')}`,
   };
+}
+
+function readPackageManifestFromZip(path: string): ComponentPackageJson {
+  const packageEntry = readPackageJsonEntryFromZip(readFileSync(path));
+  if (!packageEntry) return {};
+  try {
+    return JSON.parse(packageEntry.toString('utf8')) as ComponentPackageJson;
+  } catch {
+    fail('package.json inside source archive must be valid JSON before upload.', 'upload.package_json.invalid');
+  }
+}
+
+function readPackageJsonEntryFromZip(zip: Buffer): Buffer | undefined {
+  let offset = 0;
+  let selected: Buffer | undefined;
+  let selectedName: string | undefined;
+  while (offset + 30 <= zip.length) {
+    const signature = zip.readUInt32LE(offset);
+    if (signature === 0x02014b50 || signature === 0x06054b50) break;
+    if (signature !== 0x04034b50) {
+      offset += 1;
+      continue;
+    }
+
+    const flags = zip.readUInt16LE(offset + 6);
+    const method = zip.readUInt16LE(offset + 8);
+    const compressedSize = zip.readUInt32LE(offset + 18);
+    const nameLength = zip.readUInt16LE(offset + 26);
+    const extraLength = zip.readUInt16LE(offset + 28);
+    const nameStart = offset + 30;
+    const dataStart = nameStart + nameLength + extraLength;
+    const dataEnd = dataStart + compressedSize;
+    if (nameStart > zip.length || dataStart > zip.length || dataEnd > zip.length) break;
+
+    const entryName = zip.subarray(nameStart, nameStart + nameLength).toString('utf8').replace(/\\/g, '/');
+    if ((flags & 0x08) === 0 && isPackageJsonZipEntry(entryName)) {
+      const data = decodeZipEntry(zip.subarray(dataStart, dataEnd), method);
+      if (!selectedName || entryName.length < selectedName.length) {
+        selected = data;
+        selectedName = entryName;
+      }
+    }
+    offset = dataEnd;
+  }
+  return selected;
+}
+
+function isPackageJsonZipEntry(entryName: string): boolean {
+  const normalized = entryName.replace(/^\/+/, '');
+  return normalized === 'package.json'
+    || (
+      normalized.endsWith('/package.json')
+      && !normalized.includes('/node_modules/')
+      && !normalized.includes('/dist/')
+      && !normalized.includes('/.git/')
+    );
+}
+
+function decodeZipEntry(data: Buffer, method: number): Buffer {
+  if (method === 0) return Buffer.from(data);
+  if (method === 8) return inflateRawSync(data);
+  fail(`Unsupported package.json compression method in source archive: ${method}.`, 'upload.package_json.unsupported_zip');
 }
 
 function collectPackageFiles(root: string): Array<{ name: string; data: Buffer }> {

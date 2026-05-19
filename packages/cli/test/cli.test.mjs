@@ -242,6 +242,63 @@ test('upload blocks stale marketplace authoring packages before network transpor
   }
 });
 
+test('upload blocks stale marketplace authoring packages inside zip before network transport', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-upload-zip-freshness-'));
+  let calls = 0;
+  const server = await createServer(async (_req, res) => {
+    calls += 1;
+    writeJson(res, { success: true, buildId: 'should-not-upload', status: 'queued' });
+  });
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    await writeFile(path.join(componentDir, 'package.json'), JSON.stringify({
+      name: 'fixture-component',
+      version: '0.1.0',
+      dependencies: {
+        '@promptframe/contracts': '^0.1.4',
+        '@promptframe/component-kit': '^0.1.5',
+      },
+      devDependencies: {
+        '@promptframe/cli': '^0.1.5',
+      },
+    }, null, 2));
+    const zipPath = path.join(dir, 'component.zip');
+    await execFileAsync('node', [
+      cliPath,
+      'package',
+      componentDir,
+      '--out',
+      zipPath,
+    ]);
+
+    await assert.rejects(
+      execFileAsync('node', [
+        cliPath,
+        'upload',
+        zipPath,
+        '--endpoint',
+        server.url,
+        '--target',
+        'marketplace_authoring',
+        '--json',
+      ]),
+      (error) => {
+        assert.equal(error.code, 1);
+        const payload = JSON.parse(error.stderr);
+        assert.equal(payload.command, 'upload');
+        assert.equal(payload.diagnostic.code, 'component_standard.authoring_package.contracts.min_version');
+        assert.equal(payload.retryable, false);
+        return true;
+      },
+    );
+    assert.equal(calls, 0);
+  } finally {
+    await server.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('package validates a component folder and writes a platform zip artifact', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-package-'));
   try {
