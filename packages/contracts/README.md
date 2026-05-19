@@ -9,3 +9,4 @@ Key public exports:
 - `PROMPTFRAME_AUTHORING_STANDARD_RELEASE`: current authoring standard release metadata, source hash, package floors, supported component types, and upload target policy.
 - `authoringStandardFreshnessDecisionSchema`: shared shape for local tooling and platform admission to explain whether an authoring package is current, warning-only, upload-blocking, or security-breaking.
 - `authoringUploadTargetSchema`: public upload lanes for `marketplace_authoring` and `project_private_generation`.
+- `componentReusabilityScoreSchema`: shared shape for deterministic component reuse diagnostics emitted by local CLI checks and platform admission.

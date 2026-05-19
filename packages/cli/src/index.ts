@@ -38,6 +38,11 @@ import {
   type ComponentPackageJson,
   type PackageFreshnessDiagnostic,
 } from './lifecycle.js';
+import {
+  evaluateLocalReusability,
+  reusabilityDiagnostics,
+  type LocalReusabilityDiagnostic,
+} from './reusability.js';
 
 const command = process.argv[2] ?? 'help';
 const args = process.argv.slice(3);
@@ -172,12 +177,16 @@ async function check(argv: string[]): Promise<void> {
   const manifest = validateComponentDirectory(dir);
   assertAuthoringPackageFreshness(dir, target);
   const freshness = await resolveSoftRemoteStandardFreshness(argv, target, 'check');
+  const localReusability = evaluateDirectoryReusability(dir, manifest, target);
+  const diagnostics = reusabilityDiagnostics(localReusability);
   const output = {
     command: 'check',
     dir,
     manifest: manifestSummary(manifest),
     checkedRuleIds: VALIDATE_CHECKED_RULE_IDS,
     freshness,
+    localReusability,
+    diagnostics,
     diagnostic: diagnostic('check.completed', 'info', 'Component authoring checks completed.'),
   };
   if (hasFlag(argv, '--json')) {
@@ -187,6 +196,7 @@ async function check(argv: string[]): Promise<void> {
   console.log(`check passed: ${dir}`);
   console.log(`Target: ${target}`);
   console.log(`Freshness: ${output.freshness.status}`);
+  printDiagnostics(diagnostics);
 }
 
 function upgrade(argv: string[]): void {
@@ -352,13 +362,16 @@ function packageDirectory(componentDir: string, outArg?: string): { out: string;
   return { out, sizeBytes, sha256 };
 }
 
-function packageDirectoryForUpload(
+function packageDirectoryForUploadWithLocalReusability(
   componentDir: string,
   uploadTarget: AuthoringUploadTarget,
-  outArg?: string,
+  outArg: string | undefined,
+  onReusability: (reusability: ReturnType<typeof evaluateDirectoryReusability>) => void,
 ): { out: string; sizeBytes: number; sha256: string } {
   const dir = resolve(componentDir);
+  const manifest = validateComponentDirectory(dir);
   assertAuthoringPackageFreshness(dir, uploadTarget);
+  onReusability(evaluateDirectoryReusability(dir, manifest, uploadTarget));
   return packageDirectory(dir, outArg);
 }
 
@@ -382,9 +395,18 @@ async function remoteCommand(name: 'upload' | 'status' | 'reindex' | 'probe', ar
 async function uploadComponent(argv: string[]): Promise<void> {
   const target = resolve(argv[0] ?? '.');
   const uploadTarget = resolveUploadTarget(argv);
+  let localReusability: ReturnType<typeof evaluateDirectoryReusability> | undefined;
   const artifact = target.endsWith('.zip')
     ? packageZipForUpload(target, uploadTarget)
-    : packageDirectoryForUpload(target, uploadTarget, valueAfter(argv, '--out'));
+    : packageDirectoryForUploadWithLocalReusability(
+        target,
+        uploadTarget,
+        valueAfter(argv, '--out'),
+        (reusability) => {
+          localReusability = reusability;
+        },
+      );
+  const localDiagnostics = localReusability ? reusabilityDiagnostics(localReusability) : undefined;
   const endpoint = resolveEndpoint('upload', argv);
   await assertRemoteStandardFreshness(endpoint, argv);
   const file = readFileSync(artifact.out);
@@ -405,6 +427,7 @@ async function uploadComponent(argv: string[]): Promise<void> {
     uploadTarget,
     jobId: getBuildId(payload),
     package: artifact,
+    ...(localReusability ? { localReusability, diagnostics: localDiagnostics } : {}),
     diagnostic: diagnostic('upload.completed', 'info', 'Component upload accepted by platform.'),
   };
   if (hasFlag(argv, '--json')) {
@@ -414,6 +437,7 @@ async function uploadComponent(argv: string[]): Promise<void> {
   console.log('Upload accepted by PromptFrame platform.');
   console.log(`Build: ${output.jobId ?? 'unknown'}`);
   console.log(`Status: ${stringValue(payload.status) ?? stringValue(asRecord(payload.build)?.status) ?? 'queued'}`);
+  if (localDiagnostics) printDiagnostics(localDiagnostics);
   printStatusUrl(endpoint, payload);
 }
 
@@ -755,6 +779,20 @@ function readPreviewProps(dir: string): Record<string, unknown> {
     fail('src/preview-props.json must be a JSON object.', 'component_standard.preview.object');
   }
   return preview;
+}
+
+function evaluateDirectoryReusability(
+  dir: string,
+  manifest: ComponentManifest,
+  uploadTarget: AuthoringUploadTarget,
+): ReturnType<typeof evaluateLocalReusability> {
+  return evaluateLocalReusability({
+    manifest,
+    uploadTarget,
+    componentSourceText: readIfExists(join(dir, manifest.entry.sourcePath)),
+    schemaSourceText: readIfExists(join(dir, manifest.entry.propsSchemaPath)),
+    previewProps: readPreviewProps(dir),
+  });
 }
 
 function parsePort(value: string): number {
@@ -1109,6 +1147,13 @@ function diagnostic(
   message: string,
 ): { code: string; severity: 'info' | 'warning' | 'error'; message: string } {
   return { code, severity, message };
+}
+
+function printDiagnostics(diagnostics: LocalReusabilityDiagnostic[]): void {
+  for (const item of diagnostics) {
+    console.log(`${item.severity.toUpperCase()} ${item.code}: ${item.message}`);
+    if (item.repairHint) console.log(`Hint: ${item.repairHint}`);
+  }
 }
 
 function formatPackageFreshnessFailure(

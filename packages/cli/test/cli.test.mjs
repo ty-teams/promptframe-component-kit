@@ -389,6 +389,39 @@ test('check reports offline degraded freshness when no platform endpoint is conf
   }
 });
 
+test('check reports local reusability diagnostics for low-reuse marketplace authoring components', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-check-reuse-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+
+    const check = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'check',
+      componentDir,
+      '--target',
+      'marketplace_authoring',
+      '--json',
+    ], {
+      env: {
+        ...process.env,
+        PROMPTFRAME_API_BASE: '',
+        REMOTION_MEDIA_API_BASE: '',
+        PROMPTFRAME_CONFIG: path.join(dir, 'missing-config.json'),
+      },
+    })).stdout);
+
+    assert.equal(check.localReusability.contractVersion, 'component-reusability.v0.1.0');
+    assert.equal(check.localReusability.uploadTarget, 'marketplace_authoring');
+    assert.equal(check.localReusability.recommendation, 'manual_review');
+    assert.ok(check.localReusability.score < 0.55);
+    assert.ok(check.localReusability.signals.some((signal) => signal.id === 'propsRichness'));
+    assert.equal(check.diagnostics[0].code, 'component_market.reusability.marketplace_manual_review');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('check blocks stale remote standard source hash when endpoint is configured', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-check-sourcehash-'));
   const calls = [];
@@ -473,6 +506,47 @@ test('upload accepts marketplace strict target alias before platform transport',
     assert.equal(upload.jobId, 'build-strict');
     assert.deepEqual(calls.map((call) => call.url), ['/components/standard', '/components/marketplace/upload']);
     assert.equal(calls[1].target, 'marketplace_authoring');
+  } finally {
+    await server.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('directory upload returns local reusability diagnostics with the accepted platform response', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-upload-reuse-'));
+  const server = await createServer(async (req, res) => {
+    if (req.url === '/components/standard') {
+      writeJson(res, {
+        success: true,
+        sourceVersion: 'component-standard.v0.1.0',
+        sourceHash: 'sha256:8c1e01c36155b4b646981064d24df9bd8cda501fd9cd9da93e5b62f40db22d52',
+      });
+      return;
+    }
+    if (req.url === '/components/marketplace/upload') {
+      writeJson(res, { success: true, jobId: 'build-reuse', status: 'queued' });
+      return;
+    }
+    writeJson(res, { success: false, error: `unexpected path: ${req.url}` }, 404);
+  });
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    const upload = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'upload',
+      componentDir,
+      '--endpoint',
+      server.url,
+      '--target',
+      'marketplace_authoring',
+      '--json',
+    ])).stdout);
+
+    assert.equal(upload.command, 'upload');
+    assert.equal(upload.jobId, 'build-reuse');
+    assert.equal(upload.localReusability.recommendation, 'manual_review');
+    assert.equal(upload.diagnostics[0].code, 'component_market.reusability.marketplace_manual_review');
   } finally {
     await server.close();
     await rm(dir, { recursive: true, force: true });

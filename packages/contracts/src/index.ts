@@ -11,6 +11,7 @@ export const COMPONENT_STANDARD_POLICY_VERSION = 'component-standard-policy.v0.1
 export const COMPONENT_SECURITY_POLICY_VERSION = 'component-security-policy.v0.1.0' as const;
 export const PROMPTFRAME_STYLE_CONTRACT_VERSION = 'promptframe-style.v0.1.0' as const;
 export const AUTHORING_STANDARD_RELEASE_VERSION = 'authoring-standard-release.v0.1.0' as const;
+export const COMPONENT_REUSABILITY_CONTRACT_VERSION = 'component-reusability.v0.1.0' as const;
 
 export const PROMPTFRAME_PUBLIC_STANDARD_POLICY = {
   policyVersion: COMPONENT_STANDARD_POLICY_VERSION,
@@ -337,6 +338,54 @@ export const authoringPackageFloorSchema = z.object({
   createComponent: semverSchema,
 }).strict();
 export type AuthoringPackageFloor = z.infer<typeof authoringPackageFloorSchema>;
+
+export const componentReusabilityTargetVisibilitySchema = z.enum([
+  'project_private',
+  'user_private',
+  'team_private',
+  'public',
+]);
+export type ComponentReusabilityTargetVisibility = z.infer<typeof componentReusabilityTargetVisibilitySchema>;
+
+export const componentReusabilitySignalIdSchema = z.enum([
+  'propsRichness',
+  'hardcodedContentRisk',
+  'dataShapeRichness',
+  'styleConfigurability',
+  'domainNeutrality',
+  'emptyStateSupport',
+  'previewCaseCoverage',
+  'sourceFactsReuse',
+]);
+export type ComponentReusabilitySignalId = z.infer<typeof componentReusabilitySignalIdSchema>;
+
+export const componentReusabilityRecommendationSchema = z.enum([
+  'allow',
+  'warn',
+  'manual_review',
+  'reject',
+]);
+export type ComponentReusabilityRecommendation = z.infer<typeof componentReusabilityRecommendationSchema>;
+
+export const componentReusabilitySignalSchema = z.object({
+  id: componentReusabilitySignalIdSchema,
+  score: z.number().min(0).max(1),
+  weight: z.number().positive().max(1),
+  severity: z.enum(['info', 'warning', 'error']).default('info'),
+  reason: nonEmptyStringSchema.max(500),
+}).strict();
+export type ComponentReusabilitySignal = z.infer<typeof componentReusabilitySignalSchema>;
+
+export const componentReusabilityScoreSchema = z.object({
+  contractVersion: z.literal(COMPONENT_REUSABILITY_CONTRACT_VERSION).default(COMPONENT_REUSABILITY_CONTRACT_VERSION),
+  uploadTarget: authoringUploadTargetSchema,
+  targetVisibility: componentReusabilityTargetVisibilitySchema,
+  score: z.number().min(0).max(1),
+  recommendation: componentReusabilityRecommendationSchema,
+  signals: z.array(componentReusabilitySignalSchema).min(1).max(16),
+  generatedAt: z.string().datetime(),
+}).strict();
+export type ComponentReusabilityScore = z.infer<typeof componentReusabilityScoreSchema>;
 
 export const authoringStandardReleaseSchema = z.object({
   releaseVersion: z.literal(AUTHORING_STANDARD_RELEASE_VERSION),
