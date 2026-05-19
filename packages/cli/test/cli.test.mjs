@@ -88,6 +88,7 @@ test('upload, probe, and reindex call platform transport paths with stable JSON'
     calls.push({ method: req.method, url: req.url, body });
     if (req.url === '/components/marketplace/upload') {
       assert.equal(req.method, 'POST');
+      assert.equal(req.headers['x-promptframe-upload-target'], 'project_private_generation');
       assert.match(body.toString('latin1'), /fake component zip/);
       writeJson(res, { success: true, jobId: 'build-uploaded', status: 'queued' });
       return;
@@ -116,6 +117,8 @@ test('upload, probe, and reindex call platform transport paths with stable JSON'
       zipPath,
       '--endpoint',
       server.url,
+      '--target',
+      'project_private_generation',
       '--json',
     ])).stdout);
     assert.equal(upload.command, 'upload');
@@ -156,6 +159,36 @@ test('upload, probe, and reindex call platform transport paths with stable JSON'
     ]);
   } finally {
     await server.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('upload rejects unknown public authoring targets before network transport', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-upload-target-'));
+  try {
+    const zipPath = path.join(dir, 'component.zip');
+    await writeFile(zipPath, 'fake component zip');
+    await assert.rejects(
+      execFileAsync('node', [
+        cliPath,
+        'upload',
+        zipPath,
+        '--endpoint',
+        'https://promptframe.invalid/api-proxy',
+        '--target',
+        'raw_esm_direct',
+        '--json',
+      ]),
+      (error) => {
+        assert.equal(error.code, 1);
+        const payload = JSON.parse(error.stderr);
+        assert.equal(payload.command, 'upload');
+        assert.equal(payload.diagnostic.code, 'upload.target.invalid');
+        assert.equal(payload.retryable, false);
+        return true;
+      },
+    );
+  } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });

@@ -11,6 +11,7 @@ npx promptframe validate .
 npx promptframe preview .
 npx promptframe package . --out ./component.zip
 npx promptframe upload ./component.zip --endpoint https://your-promptframe.example/api-proxy
+npx promptframe upload ./component.zip --target project_private_generation --endpoint https://your-promptframe.example/api-proxy
 npx promptframe status <buildId> --endpoint https://your-promptframe.example/api-proxy
 ```
 
@@ -22,6 +23,8 @@ Endpoint resolution is explicit and public-safe:
 4. local config written by `promptframe configure --endpoint <url>`
 
 The CLI embeds no production, Tailscale, local Docker, or private PromptFrame endpoint default. `dev .` starts the component template's local Vite preview shell with Remotion Player. `preview .` reads `src/preview-props.json` and reports the local Remotion preview envelope; neither command runs a custom runtime or replaces the platform iframe preview/render pipeline. Upload success only means the platform accepted the source package for trust-pipeline admission; use `status`, `reindex`, and `probe` to inspect build readiness, evidence/search readiness, and layout/security diagnostics.
+
+`upload` defaults to `--target marketplace_authoring`, the external authoring lane. Director Component Author jobs must use `--target project_private_generation` so the server can keep the component project scoped. Unknown targets fail locally before network transport with diagnostic code `upload.target.invalid`; the platform repeats the same admission check and remains the final authority.
 
 Local and remote commands support stable JSON output:
 

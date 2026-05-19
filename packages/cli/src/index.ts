@@ -21,8 +21,10 @@ import {
   PROMPTFRAME_PUBLIC_SECURITY_POLICY,
   PROMPTFRAME_PUBLIC_STANDARD_POLICY,
   PROMPTFRAME_CONTRACTS_VERSION,
+  authoringUploadTargetSchema,
   parseComponentManifest,
   type ComponentManifest,
+  type AuthoringUploadTarget,
   type PublicPolicyRuleId,
 } from '@promptframe/contracts';
 
@@ -283,6 +285,7 @@ async function remoteCommand(name: 'upload' | 'status' | 'reindex' | 'probe', ar
 async function uploadComponent(argv: string[]): Promise<void> {
   const target = resolve(argv[0] ?? '.');
   const endpoint = resolveEndpoint('upload', argv);
+  const uploadTarget = resolveUploadTarget(argv);
   const artifact = target.endsWith('.zip')
     ? packageArtifactFromZip(target)
     : packageDirectory(target, valueAfter(argv, '--out'));
@@ -292,12 +295,16 @@ async function uploadComponent(argv: string[]): Promise<void> {
   const payload = await fetchJson(`${endpoint}/components/marketplace/upload`, {
     method: 'POST',
     body: form,
-    headers: buildContextHeaders(argv),
+    headers: {
+      ...buildContextHeaders(argv),
+      'x-promptframe-upload-target': uploadTarget,
+    },
   }, 'upload.http.failed');
   const output = {
     ...payload,
     command: 'upload',
     endpoint,
+    uploadTarget,
     jobId: getBuildId(payload),
     package: artifact,
     diagnostic: diagnostic('upload.completed', 'info', 'Component upload accepted by platform.'),
@@ -310,6 +317,15 @@ async function uploadComponent(argv: string[]): Promise<void> {
   console.log(`Build: ${output.jobId ?? 'unknown'}`);
   console.log(`Status: ${stringValue(payload.status) ?? stringValue(asRecord(payload.build)?.status) ?? 'queued'}`);
   printStatusUrl(endpoint, payload);
+}
+
+function resolveUploadTarget(argv: string[]): AuthoringUploadTarget {
+  const raw = valueAfter(argv, '--target') ?? valueAfter(argv, '--upload-target') ?? 'marketplace_authoring';
+  const parsed = authoringUploadTargetSchema.safeParse(raw);
+  if (!parsed.success) {
+    fail(`Unknown component upload target: ${raw}.`, 'upload.target.invalid');
+  }
+  return parsed.data;
 }
 
 async function showStatus(argv: string[]): Promise<void> {
@@ -883,6 +899,7 @@ Commands:
   dev <dir>                        Start the local Remotion Player preview server
   package <dir> --out <zip>        Validate and package a component source zip
   upload <dir|zip>                 Upload component source package to PromptFrame
+    --target <target>              marketplace_authoring or project_private_generation
   status <buildId>                 Fetch component build status
   reindex <buildId>                Rebuild component search/evidence indexes
   probe <buildId> --level <level>  Rerun component layout/security probe
