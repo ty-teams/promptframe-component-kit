@@ -27,6 +27,13 @@ import {
   type AuthoringUploadTarget,
   type PublicPolicyRuleId,
 } from '@promptframe/contracts';
+import {
+  applyPackageChanges,
+  buildFreshnessDecision,
+  computePackageChanges,
+  resolveLocalPreviewScript,
+  type ComponentPackageJson,
+} from './lifecycle.js';
 
 const command = process.argv[2] ?? 'help';
 const args = process.argv.slice(3);
@@ -59,6 +66,12 @@ async function run(name: string, argv: string[]): Promise<void> {
       break;
     case 'validate':
       validate(argv);
+      break;
+    case 'check':
+      check(argv);
+      break;
+    case 'upgrade':
+      upgrade(argv);
       break;
     case 'preview':
       preview(argv);
@@ -102,17 +115,10 @@ function standard(): void {
     securityPolicyVersion: PROMPTFRAME_PUBLIC_SECURITY_POLICY.policyVersion,
     previewLimits: PROMPTFRAME_PUBLIC_STANDARD_POLICY.previewLimits,
     authoringStandardRelease: PROMPTFRAME_AUTHORING_STANDARD_RELEASE,
-    freshness: {
-      status: 'current',
+    freshness: buildFreshnessDecision(
       target,
-      localStandardVersion: COMPONENT_STANDARD_VERSION,
-      localStandardSourceHash: COMPONENT_STANDARD_SOURCE_HASH,
-      currentStandardVersion: COMPONENT_STANDARD_VERSION,
-      currentStandardSourceHash: COMPONENT_STANDARD_SOURCE_HASH,
-      minPackageVersions: PROMPTFRAME_AUTHORING_STANDARD_RELEASE.minPackageVersions,
-      diagnostic: diagnostic('standard.freshness.current', 'info', 'Local authoring standard matches the current public release.'),
-      retryable: false,
-    },
+      diagnostic('standard.freshness.current', 'info', 'Local authoring standard matches the current public release.'),
+    ),
     diagnostic: diagnostic('standard.completed', 'info', 'Public PromptFrame component standard fetched.'),
   });
 }
@@ -156,24 +162,81 @@ function validate(argv: string[]): void {
   console.log(`validate passed: ${dir}`);
 }
 
+function check(argv: string[]): void {
+  const dir = resolve(firstPositionalArg(argv) ?? '.');
+  const target = resolveUploadTarget(argv);
+  const manifest = validateComponentDirectory(dir);
+  const output = {
+    command: 'check',
+    dir,
+    manifest: manifestSummary(manifest),
+    checkedRuleIds: VALIDATE_CHECKED_RULE_IDS,
+    freshness: buildFreshnessDecision(
+      target,
+      diagnostic('check.freshness.current', 'info', 'Local authoring standard matches the current public release.'),
+    ),
+    diagnostic: diagnostic('check.completed', 'info', 'Component authoring checks completed.'),
+  };
+  if (hasFlag(argv, '--json')) {
+    printJson(output);
+    return;
+  }
+  console.log(`check passed: ${dir}`);
+  console.log(`Target: ${target}`);
+  console.log(`Freshness: ${output.freshness.status}`);
+}
+
+function upgrade(argv: string[]): void {
+  const dir = resolve(firstPositionalArg(argv) ?? '.');
+  if (hasFlag(argv, '--apply') && hasFlag(argv, '--dry-run')) {
+    fail('upgrade accepts either --apply or --dry-run, not both.', 'upgrade.mode.conflict', 2);
+  }
+  const apply = hasFlag(argv, '--apply');
+  const packagePath = join(dir, 'package.json');
+  const packageJson = readPackageManifest(packagePath);
+  const packageChanges = computePackageChanges(packageJson);
+
+  if (apply && packageChanges.length > 0) {
+    const nextPackageJson = applyPackageChanges(packageJson, packageChanges);
+    writeFileSync(packagePath, `${JSON.stringify(nextPackageJson, null, 2)}\n`, 'utf8');
+  }
+
+  const output = {
+    command: 'upgrade',
+    dir,
+    apply,
+    packageChanges,
+    diagnostic: diagnostic(
+      apply ? 'upgrade.applied' : 'upgrade.dry_run',
+      'info',
+      apply
+        ? 'PromptFrame authoring package floors were updated.'
+        : 'PromptFrame authoring package floor changes were computed without writing files.',
+    ),
+  };
+  if (hasFlag(argv, '--json')) {
+    printJson(output);
+    return;
+  }
+  console.log(apply ? `upgrade applied: ${dir}` : `upgrade dry-run: ${dir}`);
+  for (const change of packageChanges) {
+    console.log(`${change.dependencySet} ${change.name}: ${change.current ?? '<missing>'} -> ${change.next}`);
+  }
+}
+
 function preview(argv: string[]): void {
   const dir = resolve(firstPositionalArg(argv) ?? '.');
   const manifest = validateComponentDirectory(dir);
   const previewEnvelope = readPreviewProps(dir);
+  const previewScript = resolveLocalPreviewScript(readPackageManifest(join(dir, 'package.json')));
   const output = {
     command: 'preview',
     dir,
-    manifest: {
-      id: manifest.id,
-      name: manifest.name,
-      displayName: manifest.displayName,
-      version: manifest.version,
-      componentType: manifest.componentType ?? manifest.layer,
-    },
+    manifest: manifestSummary(manifest),
     renderingSystem: 'remotion',
     previewSource: 'src/preview-props.json',
     preview: previewEnvelope,
-    localDevCommand: ['npm', 'run', 'dev'],
+    localDevCommand: ['npm', 'run', previewScript],
     diagnostic: diagnostic('preview.ready', 'info', 'Local Remotion preview envelope is ready.'),
   };
   if (hasFlag(argv, '--json')) {
@@ -183,7 +246,7 @@ function preview(argv: string[]): void {
   console.log(`preview ready: ${dir}`);
   console.log(`Rendering system: ${output.renderingSystem}`);
   console.log(`Preview: ${previewEnvelope.width}x${previewEnvelope.height} @ ${previewEnvelope.fps}fps, ${previewEnvelope.durationFrames} frames`);
-  console.log('Run: npm run dev');
+  console.log(`Run: npm run ${previewScript}`);
 }
 
 async function dev(argv: string[]): Promise<void> {
@@ -192,17 +255,12 @@ async function dev(argv: string[]): Promise<void> {
   const previewEnvelope = readPreviewProps(dir);
   const host = valueAfter(argv, '--host') ?? '127.0.0.1';
   const port = parsePort(valueAfter(argv, '--port') ?? '5173');
-  const devCommand = ['npm', 'run', 'dev', '--', '--host', host, '--port', String(port)];
+  const devScript = resolveLocalPreviewScript(readPackageManifest(join(dir, 'package.json')));
+  const devCommand = ['npm', 'run', devScript, '--', '--host', host, '--port', String(port)];
   const output = {
     command: 'dev',
     dir,
-    manifest: {
-      id: manifest.id,
-      name: manifest.name,
-      displayName: manifest.displayName,
-      version: manifest.version,
-      componentType: manifest.componentType ?? manifest.layer,
-    },
+    manifest: manifestSummary(manifest),
     renderingSystem: 'remotion-player',
     previewSource: 'src/preview-props.json',
     preview: previewEnvelope,
@@ -251,6 +309,27 @@ function validateComponentDirectory(dir: string): ComponentManifest {
   validateSecurityPolicy(dir);
   checkImportBoundary(dir);
   return parsed;
+}
+
+function manifestSummary(manifest: ComponentManifest): Record<string, string | undefined> {
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    displayName: manifest.displayName,
+    version: manifest.version,
+    componentType: manifest.componentType ?? manifest.layer,
+  };
+}
+
+function readPackageManifest(path: string): ComponentPackageJson {
+  if (!existsSync(path)) {
+    fail('package.json is required before running upgrade.', 'upgrade.package_json.missing');
+  }
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as ComponentPackageJson;
+  } catch {
+    fail('package.json must be valid JSON before running upgrade.', 'upgrade.package_json.invalid');
+  }
 }
 
 function packageDirectory(componentDir: string, outArg?: string): { out: string; sizeBytes: number; sha256: string } {
@@ -824,7 +903,11 @@ function redactConfig(config: Record<string, unknown>): Record<string, unknown> 
   });
 }
 
-function diagnostic(code: string, severity: 'info' | 'warning' | 'error', message: string): Record<string, string> {
+function diagnostic(
+  code: string,
+  severity: 'info' | 'warning' | 'error',
+  message: string,
+): { code: string; severity: 'info' | 'warning' | 'error'; message: string } {
   return { code, severity, message };
 }
 
@@ -895,6 +978,8 @@ Commands:
   standard                         Print current public component standard versions
   doctor <dir>                     Check required component files
   validate <dir>                   Validate manifest and basic source boundaries
+  check <dir>                      Validate, report rule IDs, and check standard freshness
+  upgrade <dir>                    Update PromptFrame package floors (--dry-run by default)
   preview <dir>                    Validate and print local Remotion preview envelope
   dev <dir>                        Start the local Remotion Player preview server
   package <dir> --out <zip>        Validate and package a component source zip

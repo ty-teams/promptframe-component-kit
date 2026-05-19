@@ -14,6 +14,21 @@ test('public templates use the current PromptFrame authoring package baseline', 
     assert.equal(packageJson.dependencies?.['@promptframe/component-kit'], '^0.1.6', templatePackagePath);
     assert.equal(packageJson.dependencies?.['@promptframe/contracts'], '^0.1.5', templatePackagePath);
     assert.equal(packageJson.dependencies?.['@remotion/player'], '^4.0.0', templatePackagePath);
+    assert.equal(packageJson.devDependencies?.['@promptframe/cli'], '^0.1.9', templatePackagePath);
+  }
+});
+
+test('public templates expose PromptFrame CLI lifecycle scripts', async () => {
+  for (const templatePackagePath of [
+    'templates/react-remotion/package.json',
+    'packages/create-component/templates/react-remotion/package.json',
+  ]) {
+    const packageJson = JSON.parse(await readFile(path.join(repoRoot, templatePackagePath), 'utf8'));
+    assert.equal(packageJson.scripts?.dev, 'promptframe dev .', templatePackagePath);
+    assert.equal(packageJson.scripts?.['preview:serve'], 'vite --host 127.0.0.1', templatePackagePath);
+    assert.equal(packageJson.scripts?.check, 'promptframe check .', templatePackagePath);
+    assert.equal(packageJson.scripts?.upload, 'promptframe upload .', templatePackagePath);
+    assert.equal(packageJson.scripts?.upgrade, 'promptframe upgrade .', templatePackagePath);
   }
 });
 

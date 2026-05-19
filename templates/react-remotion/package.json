@@ -4,12 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "promptframe dev .",
+    "preview:serve": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
     "format": "prettier --check .",
     "test": "vitest run",
-    "validate": "npm run lint && npm run test && npm run build"
+    "validate": "npm run lint && npm run test && npm run build",
+    "check": "promptframe check .",
+    "upload": "promptframe upload .",
+    "upgrade": "promptframe upgrade ."
   },
   "dependencies": {
     "@promptframe/component-kit": "^0.1.6",
@@ -24,6 +28,7 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@promptframe/cli": "^0.1.9",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

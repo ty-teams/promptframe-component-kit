@@ -49,6 +49,7 @@ npm install
 npx promptframe standard
 npx promptframe doctor .
 npx promptframe dev .
+npx promptframe check .
 npx promptframe validate .
 npx promptframe preview .
 npx promptframe package . --out ./my-component.zip
@@ -63,7 +64,7 @@ npx promptframe status <buildId> --endpoint <promptframe-api-base>
 
 Do not guess private service addresses. If no endpoint is provided, finish local Remotion Player preview, validation, and local preview envelope checks, then report the missing endpoint.
 
-Automation can add `--json` to `standard`, `doctor`, `validate`, `preview`, `upload`, `status`, `reindex`, and `probe`. Use `dev --dry-run --json` to inspect the Remotion Player dev command without starting a long-running server. Read `diagnostic.code`, `checkedRuleIds`, `failureReason`, and `retryable` instead of scraping prose logs.
+Automation can add `--json` to `standard`, `doctor`, `validate`, `check`, `upgrade`, `preview`, `upload`, `status`, `reindex`, and `probe`. Use `dev --dry-run --json` to inspect the Remotion Player dev command without starting a long-running server. Use `upgrade --dry-run --json` to inspect package floor changes before editing. Read `diagnostic.code`, `checkedRuleIds`, `failureReason`, and `retryable` instead of scraping prose logs.
 
 ## Component Types
 

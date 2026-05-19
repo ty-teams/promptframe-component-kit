@@ -372,6 +372,73 @@ test('local standard, doctor, and validate expose stable JSON diagnostics', asyn
   }
 });
 
+test('check and upgrade expose freshness and package floor diagnostics', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-check-upgrade-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+
+    const check = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'check',
+      componentDir,
+      '--target',
+      'project_private_generation',
+      '--json',
+    ])).stdout);
+    assert.equal(check.command, 'check');
+    assert.equal(check.diagnostic.code, 'check.completed');
+    assert.equal(check.freshness.target, 'project_private_generation');
+    assert.equal(check.freshness.status, 'current');
+    assert.deepEqual(check.checkedRuleIds, [
+      'manifest.identity.version',
+      'manifest.component_type.supported',
+      'evidence.schema_source_hash_present',
+      'runtime.deterministic.remotion',
+      'security.forbidden.browser_apis',
+      'security.no_raw_remote_url_import',
+      'package.no_parent_imports',
+    ]);
+
+    await writeFile(path.join(componentDir, 'package.json'), JSON.stringify({
+      name: 'fixture-component',
+      version: '0.1.0',
+      dependencies: {
+        '@promptframe/contracts': '^0.1.4',
+        '@promptframe/component-kit': '^0.1.5',
+      },
+      devDependencies: {
+        '@promptframe/cli': '0.1.5',
+      },
+    }, null, 2));
+    const upgrade = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'upgrade',
+      componentDir,
+      '--dry-run',
+      '--json',
+    ])).stdout);
+    assert.equal(upgrade.command, 'upgrade');
+    assert.equal(upgrade.diagnostic.code, 'upgrade.dry_run');
+    assert.equal(upgrade.apply, false);
+    assert.ok(upgrade.packageChanges.some((change) => (
+      change.name === '@promptframe/contracts'
+      && change.current === '^0.1.4'
+      && change.next === '^0.1.5'
+    )));
+    assert.ok(upgrade.packageChanges.some((change) => (
+      change.name === '@promptframe/component-kit'
+      && change.next === '^0.1.6'
+    )));
+    assert.ok(upgrade.packageChanges.some((change) => (
+      change.name === '@promptframe/cli'
+      && change.next === '^0.1.6'
+    )));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('local JSON failures expose diagnostic failure reasons', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-local-json-failure-'));
   try {

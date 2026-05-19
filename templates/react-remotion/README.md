@@ -23,6 +23,7 @@ npm run validate
 npx promptframe standard
 npx promptframe doctor .
 npx promptframe dev .
+npx promptframe check .
 npx promptframe validate .
 npx promptframe preview .
 npx promptframe upload . --endpoint <promptframe-api-base>
@@ -63,7 +64,7 @@ npx promptframe status <buildId> --endpoint <promptframe-api-base>
 
 ## 安全策略
 
-安全规则来自平台标准 API。CLI 本地 `promptframe validate . --json` 和服务端准入会使用同一套公开 ruleId 口径；机器读取时看 `checkedRuleIds`、`diagnostic.code`、`failureReason` 和 `retryable`。
+安全规则来自平台标准 API。CLI 本地 `promptframe validate . --json` / `promptframe check . --json` 和服务端准入会使用同一套公开 ruleId 口径；机器读取时看 `checkedRuleIds`、`diagnostic.code`、`failureReason` 和 `retryable`。依赖版本过旧时先跑 `promptframe upgrade . --dry-run --json` 查看需要更新的 PromptFrame 包。
 
 - 不要使用 `eval`、`new Function`、字符串定时器、`node:fs`、`child_process`、`process.env`。
 - 不要直接使用 `fetch()` / XHR / WebSocket / Beacon。
@@ -77,6 +78,7 @@ npx promptframe status <buildId> --endpoint <promptframe-api-base>
 
 ```bash
 npx promptframe dev .
+npx promptframe check . --json
 npx promptframe preview . --json
 ```
 
