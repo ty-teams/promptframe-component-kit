@@ -22,6 +22,7 @@ Typical author flow:
 npx create-promptframe-component ./my-component --name my-component --display-name "My Component"
 cd my-component
 npm install
+npx promptframe dev .
 npx promptframe validate .
 npx promptframe preview .
 npx promptframe package . --out ./component.zip
@@ -29,9 +30,9 @@ npx promptframe upload ./component.zip --endpoint https://your-promptframe.examp
 npx promptframe status <buildId> --endpoint https://your-promptframe.example/api-proxy
 ```
 
-The CLI never embeds a production/private endpoint default. Use `--endpoint`, `PROMPTFRAME_API_BASE`, `REMOTION_MEDIA_API_BASE`, or `promptframe configure --endpoint <url>`. `preview .` is a local Remotion preview envelope check; it does not replace the platform iframe preview or render pipeline. Upload success means the platform accepted the source package for trust-pipeline admission; search, preview, render, and publish readiness are reported later by platform status/evidence/probe diagnostics.
+The CLI never embeds a production/private endpoint default. Use `--endpoint`, `PROMPTFRAME_API_BASE`, `REMOTION_MEDIA_API_BASE`, or `promptframe configure --endpoint <url>`. `dev .` starts the template's local Vite preview shell with Remotion Player; `preview .` is a local Remotion preview envelope check. Neither command replaces the platform iframe preview or render pipeline. Upload success means the platform accepted the source package for trust-pipeline admission; search, preview, render, and publish readiness are reported later by platform status/evidence/probe diagnostics.
 
-For automation, add `--json` to `standard`, `doctor`, `validate`, `preview`, `upload`, `status`, `reindex`, or `probe`. JSON output includes stable `diagnostic.code`; validation output includes `checkedRuleIds`, and JSON failures include `failureReason` plus `retryable`.
+For automation, add `--json` to `standard`, `doctor`, `validate`, `preview`, `upload`, `status`, `reindex`, or `probe`. `dev --dry-run --json` reports the local Remotion Player dev command without starting a long-running server. JSON output includes stable `diagnostic.code`; validation output includes `checkedRuleIds`, and JSON failures include `failureReason` plus `retryable`.
 
 ## Local Checks
 
@@ -59,6 +60,6 @@ Release configuration:
 
 To publish a new version, bump the package version, run local checks, push the matching package tag, and verify npm registry output after the workflow completes. Do not publish from a local npm token path for normal releases.
 
-Current registry baseline: `@promptframe/contracts@0.1.5`, `@promptframe/component-kit@0.1.6`, `@promptframe/cli@0.1.6`, `create-promptframe-component@0.1.4`. `@promptframe/contracts@0.1.5` exposes the public authoring standard release, upload target policy, and freshness decision schema. `@promptframe/component-kit@0.1.6` sources its public standard stamp and style helper contract from `@promptframe/contracts`, and `create-promptframe-component@0.1.4` scaffolds templates that use those current public package ranges while supporting explicit `--name` and `--force` for legacy wrapper compatibility.
+Current registry baseline: `@promptframe/contracts@0.1.5`, `@promptframe/component-kit@0.1.6`, `@promptframe/cli@0.1.7`, `create-promptframe-component@0.1.5`. `@promptframe/contracts@0.1.5` exposes the public authoring standard release, upload target policy, and freshness decision schema. `@promptframe/component-kit@0.1.6` sources its public standard stamp and style helper contract from `@promptframe/contracts`, and `create-promptframe-component@0.1.5` scaffolds templates that use those current public package ranges, include a Remotion Player local preview shell, and support explicit `--name` / `--force` for legacy wrapper compatibility.
 
 Before publishing, the platform repo should verify the local authoring source through its `pnpm authoring:link-local` gate. After publishing, it should switch back with `pnpm authoring:use-registry` and verify the real npm packages from `https://registry.npmjs.org/`; npm mirrors can lag new versions.

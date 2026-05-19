@@ -13,6 +13,7 @@ test('public templates use the current PromptFrame authoring package baseline', 
     const packageJson = JSON.parse(await readFile(path.join(repoRoot, templatePackagePath), 'utf8'));
     assert.equal(packageJson.dependencies?.['@promptframe/component-kit'], '^0.1.6', templatePackagePath);
     assert.equal(packageJson.dependencies?.['@promptframe/contracts'], '^0.1.5', templatePackagePath);
+    assert.equal(packageJson.dependencies?.['@remotion/player'], '^4.0.0', templatePackagePath);
   }
 });
 
@@ -37,6 +38,7 @@ test('public authoring docs include the local preview command before upload', as
     'packages/create-component/templates/react-remotion/README.md',
   ]) {
     const text = await readFile(path.join(repoRoot, docPath), 'utf8');
+    assert.match(text, /promptframe dev \./, docPath);
     assert.match(text, /promptframe preview \./, docPath);
   }
 });
@@ -53,6 +55,21 @@ test('public skill documents common diagnostics and security rule fixes', async 
     'network.remote_url',
   ]) {
     assert.match(skill, new RegExp(code.replaceAll('.', '\\.')));
+  }
+});
+
+test('public templates include a real Remotion Player dev preview shell', async () => {
+  for (const templateRoot of [
+    'templates/react-remotion',
+    'packages/create-component/templates/react-remotion',
+  ]) {
+    const indexHtml = await readFile(path.join(repoRoot, templateRoot, 'index.html'), 'utf8');
+    const previewRoot = await readFile(path.join(repoRoot, templateRoot, 'src/PreviewRoot.tsx'), 'utf8');
+
+    assert.match(indexHtml, /src\/PreviewRoot\.tsx/, templateRoot);
+    assert.match(previewRoot, /@remotion\/player/, templateRoot);
+    assert.match(previewRoot, /preview-props\.json/, templateRoot);
+    assert.match(previewRoot, /propsSchema\.parse/, templateRoot);
   }
 });
 

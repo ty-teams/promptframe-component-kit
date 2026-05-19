@@ -6,6 +6,7 @@ Use it to inspect the public component standard, check component folders, valida
 
 ```bash
 npm install -D @promptframe/cli
+npx promptframe dev .
 npx promptframe validate .
 npx promptframe preview .
 npx promptframe package . --out ./component.zip
@@ -20,7 +21,7 @@ Endpoint resolution is explicit and public-safe:
 3. `REMOTION_MEDIA_API_BASE`
 4. local config written by `promptframe configure --endpoint <url>`
 
-The CLI embeds no production, Tailscale, local Docker, or private PromptFrame endpoint default. `preview .` reads `src/preview-props.json` and reports the local Remotion preview envelope; it does not run a custom runtime or replace the platform iframe preview/render pipeline. Upload success only means the platform accepted the source package for trust-pipeline admission; use `status`, `reindex`, and `probe` to inspect build readiness, evidence/search readiness, and layout/security diagnostics.
+The CLI embeds no production, Tailscale, local Docker, or private PromptFrame endpoint default. `dev .` starts the component template's local Vite preview shell with Remotion Player. `preview .` reads `src/preview-props.json` and reports the local Remotion preview envelope; neither command runs a custom runtime or replaces the platform iframe preview/render pipeline. Upload success only means the platform accepted the source package for trust-pipeline admission; use `status`, `reindex`, and `probe` to inspect build readiness, evidence/search readiness, and layout/security diagnostics.
 
 Local and remote commands support stable JSON output:
 
@@ -28,6 +29,7 @@ Local and remote commands support stable JSON output:
 npx promptframe standard --json
 npx promptframe doctor . --json
 npx promptframe validate . --json
+npx promptframe dev . --dry-run --json
 npx promptframe preview . --json
 npx promptframe upload ./component.zip --endpoint "$PROMPTFRAME_API_BASE" --json
 npx promptframe status <buildId> --json
@@ -35,7 +37,7 @@ npx promptframe reindex <buildId> --provider-kind cloud_embedding --json
 npx promptframe probe <buildId> --level standard --json
 ```
 
-Every JSON response includes a stable `diagnostic.code`, for example `standard.completed`, `doctor.completed`, `validate.completed`, `preview.ready`, `upload.completed`, `status.completed`, `reindex.completed`, or `probe.completed`. `validate --json` also reports `checkedRuleIds` for the public policy checks it ran. JSON failures include `failureReason` and `retryable`. Missing endpoint failures exit with code `2` and use `<command>.endpoint.missing`.
+Every JSON response includes a stable `diagnostic.code`, for example `standard.completed`, `doctor.completed`, `validate.completed`, `dev.ready`, `preview.ready`, `upload.completed`, `status.completed`, `reindex.completed`, or `probe.completed`. `validate --json` also reports `checkedRuleIds` for the public policy checks it ran. `dev --dry-run --json` reports the Remotion Player dev command without starting a long-running process. JSON failures include `failureReason` and `retryable`. Missing endpoint failures exit with code `2` and use `<command>.endpoint.missing`.
 
 `standard --json` also returns `authoringStandardRelease` and `freshness`. These fields are the public SSOT for package floors, upload targets, standard source hash, and local freshness decisions:
 

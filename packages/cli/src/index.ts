@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -59,6 +60,9 @@ async function run(name: string, argv: string[]): Promise<void> {
       break;
     case 'preview':
       preview(argv);
+      break;
+    case 'dev':
+      await dev(argv);
       break;
     case 'package':
       packageComponent(argv);
@@ -178,6 +182,50 @@ function preview(argv: string[]): void {
   console.log(`Rendering system: ${output.renderingSystem}`);
   console.log(`Preview: ${previewEnvelope.width}x${previewEnvelope.height} @ ${previewEnvelope.fps}fps, ${previewEnvelope.durationFrames} frames`);
   console.log('Run: npm run dev');
+}
+
+async function dev(argv: string[]): Promise<void> {
+  const dir = resolve(firstPositionalArg(argv) ?? '.');
+  const manifest = validateComponentDirectory(dir);
+  const previewEnvelope = readPreviewProps(dir);
+  const host = valueAfter(argv, '--host') ?? '127.0.0.1';
+  const port = parsePort(valueAfter(argv, '--port') ?? '5173');
+  const devCommand = ['npm', 'run', 'dev', '--', '--host', host, '--port', String(port)];
+  const output = {
+    command: 'dev',
+    dir,
+    manifest: {
+      id: manifest.id,
+      name: manifest.name,
+      displayName: manifest.displayName,
+      version: manifest.version,
+      componentType: manifest.componentType ?? manifest.layer,
+    },
+    renderingSystem: 'remotion-player',
+    previewSource: 'src/preview-props.json',
+    preview: previewEnvelope,
+    devServer: {
+      url: `http://${host}:${port}`,
+      command: devCommand,
+    },
+    diagnostic: diagnostic('dev.ready', 'info', 'Local Remotion Player preview command is ready.'),
+  };
+
+  if (hasFlag(argv, '--json')) {
+    if (!hasFlag(argv, '--dry-run')) {
+      fail('dev --json requires --dry-run so stdout remains machine-readable.', 'dev.json_requires_dry_run');
+    }
+    printJson(output);
+    return;
+  }
+
+  console.log(`dev ready: ${dir}`);
+  console.log(`Rendering system: ${output.renderingSystem}`);
+  console.log(`Preview URL: ${output.devServer.url}`);
+  console.log(`Command: ${devCommand.join(' ')}`);
+  if (hasFlag(argv, '--dry-run')) return;
+
+  await runDevServer(dir, devCommand);
 }
 
 function packageComponent(argv: string[]): void {
@@ -479,6 +527,29 @@ function readPreviewProps(dir: string): Record<string, unknown> {
     fail('src/preview-props.json must be a JSON object.', 'component_standard.preview.object');
   }
   return preview;
+}
+
+function parsePort(value: string): number {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    fail(`Invalid dev port: ${value}`, 'dev.port.invalid');
+  }
+  return port;
+}
+
+async function runDevServer(dir: string, commandLine: string[]): Promise<void> {
+  const [commandName, ...commandArgs] = commandLine;
+  const child = spawn(commandName, commandArgs, {
+    cwd: dir,
+    stdio: 'inherit',
+    env: process.env,
+  });
+  const exitCode = await new Promise<number>((resolve) => {
+    child.on('close', (code) => resolve(code ?? 0));
+  });
+  if (exitCode !== 0) {
+    fail(`Local dev preview exited with code ${exitCode}.`, 'dev.process.failed', exitCode);
+  }
 }
 
 function validateSourceSafety(dir: string): void {
@@ -809,6 +880,7 @@ Commands:
   doctor <dir>                     Check required component files
   validate <dir>                   Validate manifest and basic source boundaries
   preview <dir>                    Validate and print local Remotion preview envelope
+  dev <dir>                        Start the local Remotion Player preview server
   package <dir> --out <zip>        Validate and package a component source zip
   upload <dir|zip>                 Upload component source package to PromptFrame
   status <buildId>                 Fetch component build status

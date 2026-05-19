@@ -222,6 +222,51 @@ test('preview exposes a local Remotion preview envelope without a platform endpo
   }
 });
 
+test('dev prepares a real Remotion Player local preview command', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-dev-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+
+    const { stdout } = await execFileAsync('node', [
+      cliPath,
+      'dev',
+      componentDir,
+      '--host',
+      '127.0.0.1',
+      '--port',
+      '5321',
+      '--dry-run',
+      '--json',
+    ], {
+      env: {
+        ...process.env,
+        PROMPTFRAME_API_BASE: '',
+        REMOTION_MEDIA_API_BASE: '',
+      },
+    });
+    const payload = JSON.parse(stdout);
+
+    assert.equal(payload.command, 'dev');
+    assert.equal(payload.renderingSystem, 'remotion-player');
+    assert.equal(payload.previewSource, 'src/preview-props.json');
+    assert.equal(payload.devServer.url, 'http://127.0.0.1:5321');
+    assert.deepEqual(payload.devServer.command, [
+      'npm',
+      'run',
+      'dev',
+      '--',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      '5321',
+    ]);
+    assert.equal(payload.diagnostic.code, 'dev.ready');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('local standard, doctor, and validate expose stable JSON diagnostics', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-local-json-'));
   try {
