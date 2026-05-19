@@ -11,6 +11,7 @@ npm install @promptframe/component-kit
 - Standard version stamps for component metadata, sourced from `@promptframe/contracts`.
 - Preview constraints used by PromptFrame component tooling.
 - Timing helpers for deterministic Remotion animations.
+- Public style helpers backed by `@promptframe/contracts`.
 
 ## Usage
 
@@ -38,12 +39,24 @@ const timeline = createDurationTimeline({
 });
 ```
 
+```ts
+import { resolvePromptFrameStyle } from '@promptframe/component-kit/style';
+
+const style = resolvePromptFrameStyle({ tone: 'tech', accentColor: '#38bdf8' }, {
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  durationInFrames: 180,
+});
+```
+
 ## Entrypoints
 
 ```ts
 import { getComponentStandardStamp } from '@promptframe/component-kit';
 import { COMPONENT_PREVIEW_CONSTRAINTS } from '@promptframe/component-kit/preview';
 import { createDurationTimeline } from '@promptframe/component-kit/timing';
+import { resolvePromptFrameStyle } from '@promptframe/component-kit/style';
 ```
 
 ## Peer Dependencies

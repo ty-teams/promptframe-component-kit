@@ -59,4 +59,4 @@ Release configuration:
 
 To publish a new version, bump the package version, run local checks, push the matching package tag, and verify npm registry output after the workflow completes.
 
-Current registry baseline: `@promptframe/contracts@0.1.3`, `@promptframe/component-kit@0.1.5`, `@promptframe/cli@0.1.5`, `create-promptframe-component@0.1.3`. `@promptframe/component-kit@0.1.5` sources its public standard stamp from `@promptframe/contracts`, and `create-promptframe-component@0.1.3` scaffolds templates that use those current public package ranges while supporting explicit `--name` and `--force` for legacy wrapper compatibility.
+Current source baseline: `@promptframe/contracts@0.1.4`, `@promptframe/component-kit@0.1.6`, `@promptframe/cli@0.1.5`, `create-promptframe-component@0.1.3`. `@promptframe/component-kit@0.1.6` sources its public standard stamp and style helper contract from `@promptframe/contracts`, and `create-promptframe-component@0.1.3` scaffolds templates that use those current public package ranges while supporting explicit `--name` and `--force` for legacy wrapper compatibility.

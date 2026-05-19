@@ -1,6 +1,6 @@
 {
   "name": "@promptframe/component-kit",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -18,6 +18,10 @@
     "./standard": {
       "import": "./dist/standard.js",
       "types": "./dist/standard.d.ts"
+    },
+    "./style": {
+      "import": "./dist/style.js",
+      "types": "./dist/style.d.ts"
     },
     "./preview": {
       "import": "./dist/preview.js",
@@ -53,7 +57,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@promptframe/contracts": "^0.1.2"
+    "@promptframe/contracts": "^0.1.4"
   },
   "peerDependencies": {
     "react": "^19.0.0",

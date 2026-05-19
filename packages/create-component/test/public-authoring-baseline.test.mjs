@@ -11,8 +11,8 @@ test('public templates use the current PromptFrame authoring package baseline', 
     'packages/create-component/templates/react-remotion/package.json',
   ]) {
     const packageJson = JSON.parse(await readFile(path.join(repoRoot, templatePackagePath), 'utf8'));
-    assert.equal(packageJson.dependencies?.['@promptframe/component-kit'], '^0.1.5', templatePackagePath);
-    assert.equal(packageJson.dependencies?.['@promptframe/contracts'], '^0.1.2', templatePackagePath);
+    assert.equal(packageJson.dependencies?.['@promptframe/component-kit'], '^0.1.6', templatePackagePath);
+    assert.equal(packageJson.dependencies?.['@promptframe/contracts'], '^0.1.4', templatePackagePath);
   }
 });
 

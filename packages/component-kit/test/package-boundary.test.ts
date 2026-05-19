@@ -31,6 +31,7 @@ test('component-kit exposes only public authoring entrypoints', () => {
     './package.json',
     './preview',
     './standard',
+    './style',
     './timing',
   ]);
   assert.equal(packageJson.sideEffects, false);
