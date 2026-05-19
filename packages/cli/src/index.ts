@@ -14,7 +14,9 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import {
   COMPONENT_MANIFEST_SCHEMA_VERSION,
   COMPONENT_REF_VERSION,
+  COMPONENT_STANDARD_SOURCE_HASH,
   COMPONENT_STANDARD_VERSION,
+  PROMPTFRAME_AUTHORING_STANDARD_RELEASE,
   PROMPTFRAME_PUBLIC_SECURITY_POLICY,
   PROMPTFRAME_PUBLIC_STANDARD_POLICY,
   PROMPTFRAME_CONTRACTS_VERSION,
@@ -81,16 +83,30 @@ async function run(name: string, argv: string[]): Promise<void> {
 }
 
 function standard(): void {
+  const target = 'marketplace_authoring';
   printJson({
     command: 'standard',
     contractsVersion: PROMPTFRAME_CONTRACTS_VERSION,
     manifestSchemaVersion: COMPONENT_MANIFEST_SCHEMA_VERSION,
     componentStandardVersion: COMPONENT_STANDARD_VERSION,
+    standardSourceHash: COMPONENT_STANDARD_SOURCE_HASH,
     componentRefVersion: COMPONENT_REF_VERSION,
-    supportedComponentTypes: ['scene_template', 'contained_widget', 'overlay', 'transition_effect'],
+    supportedComponentTypes: PROMPTFRAME_AUTHORING_STANDARD_RELEASE.supportedComponentTypes,
     standardPolicyVersion: PROMPTFRAME_PUBLIC_STANDARD_POLICY.policyVersion,
     securityPolicyVersion: PROMPTFRAME_PUBLIC_SECURITY_POLICY.policyVersion,
     previewLimits: PROMPTFRAME_PUBLIC_STANDARD_POLICY.previewLimits,
+    authoringStandardRelease: PROMPTFRAME_AUTHORING_STANDARD_RELEASE,
+    freshness: {
+      status: 'current',
+      target,
+      localStandardVersion: COMPONENT_STANDARD_VERSION,
+      localStandardSourceHash: COMPONENT_STANDARD_SOURCE_HASH,
+      currentStandardVersion: COMPONENT_STANDARD_VERSION,
+      currentStandardSourceHash: COMPONENT_STANDARD_SOURCE_HASH,
+      minPackageVersions: PROMPTFRAME_AUTHORING_STANDARD_RELEASE.minPackageVersions,
+      diagnostic: diagnostic('standard.freshness.current', 'info', 'Local authoring standard matches the current public release.'),
+      retryable: false,
+    },
     diagnostic: diagnostic('standard.completed', 'info', 'Public PromptFrame component standard fetched.'),
   });
 }

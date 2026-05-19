@@ -10,6 +10,7 @@ export const CAPABILITY_CARD_VERSION = 'component-capability-card.v0.1.0' as con
 export const COMPONENT_STANDARD_POLICY_VERSION = 'component-standard-policy.v0.1.0' as const;
 export const COMPONENT_SECURITY_POLICY_VERSION = 'component-security-policy.v0.1.0' as const;
 export const PROMPTFRAME_STYLE_CONTRACT_VERSION = 'promptframe-style.v0.1.0' as const;
+export const AUTHORING_STANDARD_RELEASE_VERSION = 'authoring-standard-release.v0.1.0' as const;
 
 export const PROMPTFRAME_PUBLIC_STANDARD_POLICY = {
   policyVersion: COMPONENT_STANDARD_POLICY_VERSION,
@@ -312,6 +313,111 @@ export const promptFrameStyleIntentSchema = z.object({
   }).strict().optional(),
 }).strict();
 export type PromptFrameStyleIntent = z.infer<typeof promptFrameStyleIntentSchema>;
+
+export const authoringUploadTargetSchema = z.enum([
+  'marketplace_authoring',
+  'project_private_generation',
+]);
+export type AuthoringUploadTarget = z.infer<typeof authoringUploadTargetSchema>;
+
+export const authoringUploadTargetPolicySchema = z.object({
+  target: authoringUploadTargetSchema,
+  description: nonEmptyStringSchema.max(500),
+  allowedVisibility: z.array(componentVisibilitySchema).min(1).max(4),
+  requiresUploadTrustPipeline: z.boolean().default(true),
+  requiresHumanPublishApproval: z.boolean().default(true),
+  deterministicGateMode: z.literal('fail_closed').default('fail_closed'),
+}).strict();
+export type AuthoringUploadTargetPolicy = z.infer<typeof authoringUploadTargetPolicySchema>;
+
+export const authoringPackageFloorSchema = z.object({
+  contracts: semverSchema,
+  componentKit: semverSchema,
+  cli: semverSchema,
+  createComponent: semverSchema,
+}).strict();
+export type AuthoringPackageFloor = z.infer<typeof authoringPackageFloorSchema>;
+
+export const authoringStandardReleaseSchema = z.object({
+  releaseVersion: z.literal(AUTHORING_STANDARD_RELEASE_VERSION),
+  contractsVersion: z.literal(PROMPTFRAME_CONTRACTS_VERSION),
+  manifestSchemaVersion: z.literal(COMPONENT_MANIFEST_SCHEMA_VERSION),
+  componentRefVersion: z.literal(COMPONENT_REF_VERSION),
+  standardVersion: z.literal(COMPONENT_STANDARD_VERSION),
+  standardSourceHash: sha256Schema,
+  standardPolicyVersion: z.literal(COMPONENT_STANDARD_POLICY_VERSION),
+  securityPolicyVersion: z.literal(COMPONENT_SECURITY_POLICY_VERSION),
+  styleContractVersion: z.literal(PROMPTFRAME_STYLE_CONTRACT_VERSION),
+  supportedComponentTypes: z.array(promptFrameComponentTypeSchema).min(1),
+  minPackageVersions: authoringPackageFloorSchema,
+  uploadTargets: z.array(authoringUploadTargetPolicySchema).min(1),
+}).strict();
+export type AuthoringStandardRelease = z.infer<typeof authoringStandardReleaseSchema>;
+
+export const authoringStandardFreshnessStatusSchema = z.enum([
+  'current',
+  'warning',
+  'upload_blocking',
+  'security_breaking',
+]);
+export type AuthoringStandardFreshnessStatus = z.infer<typeof authoringStandardFreshnessStatusSchema>;
+
+export const authoringFreshnessDiagnosticSchema = z.object({
+  code: nonEmptyStringSchema.max(160),
+  severity: z.enum(['info', 'warning', 'error']),
+  message: nonEmptyStringSchema.max(2000),
+}).strict();
+export type AuthoringFreshnessDiagnostic = z.infer<typeof authoringFreshnessDiagnosticSchema>;
+
+export const authoringStandardFreshnessDecisionSchema = z.object({
+  status: authoringStandardFreshnessStatusSchema,
+  target: authoringUploadTargetSchema,
+  localStandardVersion: z.string().trim().min(1).optional(),
+  localStandardSourceHash: sha256Schema.optional(),
+  currentStandardVersion: z.literal(COMPONENT_STANDARD_VERSION),
+  currentStandardSourceHash: sha256Schema,
+  minPackageVersions: authoringPackageFloorSchema,
+  diagnostic: authoringFreshnessDiagnosticSchema,
+  retryable: z.boolean().default(false),
+}).strict();
+export type AuthoringStandardFreshnessDecision = z.infer<typeof authoringStandardFreshnessDecisionSchema>;
+
+export const PROMPTFRAME_AUTHORING_STANDARD_RELEASE: AuthoringStandardRelease = authoringStandardReleaseSchema.parse({
+  releaseVersion: AUTHORING_STANDARD_RELEASE_VERSION,
+  contractsVersion: PROMPTFRAME_CONTRACTS_VERSION,
+  manifestSchemaVersion: COMPONENT_MANIFEST_SCHEMA_VERSION,
+  componentRefVersion: COMPONENT_REF_VERSION,
+  standardVersion: COMPONENT_STANDARD_VERSION,
+  standardSourceHash: COMPONENT_STANDARD_SOURCE_HASH,
+  standardPolicyVersion: COMPONENT_STANDARD_POLICY_VERSION,
+  securityPolicyVersion: COMPONENT_SECURITY_POLICY_VERSION,
+  styleContractVersion: PROMPTFRAME_STYLE_CONTRACT_VERSION,
+  supportedComponentTypes: promptFrameComponentTypeSchema.options,
+  minPackageVersions: {
+    contracts: '0.1.5',
+    componentKit: '0.1.6',
+    cli: '0.1.6',
+    createComponent: '0.1.4',
+  },
+  uploadTargets: [
+    {
+      target: 'marketplace_authoring',
+      description: 'External authoring lane for components submitted to the platform marketplace.',
+      allowedVisibility: ['public', 'team'],
+      requiresUploadTrustPipeline: true,
+      requiresHumanPublishApproval: true,
+      deterministicGateMode: 'fail_closed',
+    },
+    {
+      target: 'project_private_generation',
+      description: 'Director Component Author lane for project-scoped private components.',
+      allowedVisibility: ['project_private', 'private'],
+      requiresUploadTrustPipeline: true,
+      requiresHumanPublishApproval: false,
+      deterministicGateMode: 'fail_closed',
+    },
+  ],
+});
 
 export const componentRefSchema = z.object({
   contractVersion: z.literal(COMPONENT_REF_VERSION).default(COMPONENT_REF_VERSION),

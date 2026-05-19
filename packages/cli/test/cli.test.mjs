@@ -241,6 +241,16 @@ test('local standard, doctor, and validate expose stable JSON diagnostics', asyn
       'overlay',
       'transition_effect',
     ]);
+    assert.equal(standard.authoringStandardRelease.releaseVersion, 'authoring-standard-release.v0.1.0');
+    assert.equal(standard.authoringStandardRelease.standardVersion, 'component-standard.v0.1.0');
+    assert.match(standard.authoringStandardRelease.standardSourceHash, /^sha256:[a-f0-9]{64}$/);
+    assert.deepEqual(standard.authoringStandardRelease.uploadTargets.map((target) => target.target), [
+      'marketplace_authoring',
+      'project_private_generation',
+    ]);
+    assert.equal(standard.freshness.status, 'current');
+    assert.equal(standard.freshness.target, 'marketplace_authoring');
+    assert.equal(standard.freshness.currentStandardSourceHash, standard.authoringStandardRelease.standardSourceHash);
 
     const doctor = JSON.parse((await execFileAsync('node', [
       cliPath,

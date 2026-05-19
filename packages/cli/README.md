@@ -37,4 +37,10 @@ npx promptframe probe <buildId> --level standard --json
 
 Every JSON response includes a stable `diagnostic.code`, for example `standard.completed`, `doctor.completed`, `validate.completed`, `preview.ready`, `upload.completed`, `status.completed`, `reindex.completed`, or `probe.completed`. `validate --json` also reports `checkedRuleIds` for the public policy checks it ran. JSON failures include `failureReason` and `retryable`. Missing endpoint failures exit with code `2` and use `<command>.endpoint.missing`.
 
+`standard --json` also returns `authoringStandardRelease` and `freshness`. These fields are the public SSOT for package floors, upload targets, standard source hash, and local freshness decisions:
+
+- `marketplace_authoring`: external authoring lane; upload still enters the trust pipeline and public publishing requires review.
+- `project_private_generation`: Director Component Author lane; upload still enters the trust pipeline but stays project scoped.
+- `freshness.status`: `current`, `warning`, `upload_blocking`, or `security_breaking`.
+
 `validate` and `package` consume public policies from `@promptframe/contracts`: required files, preview limits, deterministic Remotion source rules, and deterministic security gate patterns such as `code.eval`, `code.new_function`, `code.string_timer`, and `host.fs_process_env`. These local checks are early author feedback; the platform admission pipeline remains the final trust gate.
