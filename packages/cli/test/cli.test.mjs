@@ -193,6 +193,55 @@ test('upload rejects unknown public authoring targets before network transport',
   }
 });
 
+test('upload blocks stale marketplace authoring packages before network transport', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-upload-freshness-'));
+  let calls = 0;
+  const server = await createServer(async (_req, res) => {
+    calls += 1;
+    writeJson(res, { success: false, error: 'upload should not reach network' });
+  });
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    await writeFile(path.join(componentDir, 'package.json'), JSON.stringify({
+      name: 'fixture-component',
+      version: '0.1.0',
+      dependencies: {
+        '@promptframe/contracts': '^0.1.4',
+        '@promptframe/component-kit': '^0.1.5',
+      },
+      devDependencies: {
+        '@promptframe/cli': '^0.1.5',
+      },
+    }, null, 2));
+
+    await assert.rejects(
+      execFileAsync('node', [
+        cliPath,
+        'upload',
+        componentDir,
+        '--endpoint',
+        server.url,
+        '--target',
+        'marketplace_authoring',
+        '--json',
+      ]),
+      (error) => {
+        assert.equal(error.code, 1);
+        const payload = JSON.parse(error.stderr);
+        assert.equal(payload.command, 'upload');
+        assert.equal(payload.diagnostic.code, 'component_standard.authoring_package.contracts.min_version');
+        assert.equal(payload.retryable, false);
+        return true;
+      },
+    );
+    assert.equal(calls, 0);
+  } finally {
+    await server.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('package validates a component folder and writes a platform zip artifact', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-package-'));
   try {
@@ -295,6 +344,66 @@ test('dev prepares a real Remotion Player local preview command', async () => {
       '5321',
     ]);
     assert.equal(payload.diagnostic.code, 'dev.ready');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('dev and check block missing marketplace authoring package floors', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-freshness-check-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    await writeFile(path.join(componentDir, 'package.json'), JSON.stringify({
+      name: 'fixture-component',
+      version: '0.1.0',
+    }, null, 2));
+
+    await assert.rejects(
+      execFileAsync('node', [
+        cliPath,
+        'dev',
+        componentDir,
+        '--dry-run',
+        '--json',
+      ]),
+      (error) => {
+        assert.equal(error.code, 1);
+        const payload = JSON.parse(error.stderr);
+        assert.equal(payload.command, 'dev');
+        assert.equal(payload.diagnostic.code, 'component_standard.authoring_package.contracts.missing');
+        return true;
+      },
+    );
+
+    await assert.rejects(
+      execFileAsync('node', [
+        cliPath,
+        'check',
+        componentDir,
+        '--target',
+        'marketplace_authoring',
+        '--json',
+      ]),
+      (error) => {
+        assert.equal(error.code, 1);
+        const payload = JSON.parse(error.stderr);
+        assert.equal(payload.command, 'check');
+        assert.equal(payload.diagnostic.code, 'component_standard.authoring_package.contracts.missing');
+        return true;
+      },
+    );
+
+    const projectPrivateCheck = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'check',
+      componentDir,
+      '--target',
+      'project_private_generation',
+      '--json',
+    ])).stdout);
+    assert.equal(projectPrivateCheck.command, 'check');
+    assert.equal(projectPrivateCheck.freshness.target, 'project_private_generation');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -677,7 +786,17 @@ async function readRequestBody(req) {
 
 async function writeFixtureComponent(componentDir) {
   await writeFileTree(componentDir, {
-    'package.json': JSON.stringify({ name: 'fixture-component', version: '0.1.0' }),
+    'package.json': JSON.stringify({
+      name: 'fixture-component',
+      version: '0.1.0',
+      dependencies: {
+        '@promptframe/contracts': '^0.1.5',
+        '@promptframe/component-kit': '^0.1.6',
+      },
+      devDependencies: {
+        '@promptframe/cli': '^0.1.10',
+      },
+    }),
     'manifest.json': JSON.stringify({
       schemaVersion: 'component-manifest.v0.1.0',
       standardVersion: 'component-standard.v0.1.0',

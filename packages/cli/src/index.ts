@@ -31,8 +31,10 @@ import {
   applyPackageChanges,
   buildFreshnessDecision,
   computePackageChanges,
+  computePackageFreshnessDiagnostics,
   resolveLocalPreviewScript,
   type ComponentPackageJson,
+  type PackageFreshnessDiagnostic,
 } from './lifecycle.js';
 
 const command = process.argv[2] ?? 'help';
@@ -166,6 +168,7 @@ function check(argv: string[]): void {
   const dir = resolve(firstPositionalArg(argv) ?? '.');
   const target = resolveUploadTarget(argv);
   const manifest = validateComponentDirectory(dir);
+  assertAuthoringPackageFreshness(dir, target);
   const output = {
     command: 'check',
     dir,
@@ -251,7 +254,9 @@ function preview(argv: string[]): void {
 
 async function dev(argv: string[]): Promise<void> {
   const dir = resolve(firstPositionalArg(argv) ?? '.');
+  const target = resolveUploadTarget(argv);
   const manifest = validateComponentDirectory(dir);
+  assertAuthoringPackageFreshness(dir, target);
   const previewEnvelope = readPreviewProps(dir);
   const host = valueAfter(argv, '--host') ?? '127.0.0.1';
   const port = parsePort(valueAfter(argv, '--port') ?? '5173');
@@ -344,6 +349,16 @@ function packageDirectory(componentDir: string, outArg?: string): { out: string;
   return { out, sizeBytes, sha256 };
 }
 
+function packageDirectoryForUpload(
+  componentDir: string,
+  uploadTarget: AuthoringUploadTarget,
+  outArg?: string,
+): { out: string; sizeBytes: number; sha256: string } {
+  const dir = resolve(componentDir);
+  assertAuthoringPackageFreshness(dir, uploadTarget);
+  return packageDirectory(dir, outArg);
+}
+
 async function remoteCommand(name: 'upload' | 'status' | 'reindex' | 'probe', argv: string[]): Promise<void> {
   switch (name) {
     case 'upload':
@@ -363,11 +378,11 @@ async function remoteCommand(name: 'upload' | 'status' | 'reindex' | 'probe', ar
 
 async function uploadComponent(argv: string[]): Promise<void> {
   const target = resolve(argv[0] ?? '.');
-  const endpoint = resolveEndpoint('upload', argv);
   const uploadTarget = resolveUploadTarget(argv);
   const artifact = target.endsWith('.zip')
     ? packageArtifactFromZip(target)
-    : packageDirectory(target, valueAfter(argv, '--out'));
+    : packageDirectoryForUpload(target, uploadTarget, valueAfter(argv, '--out'));
+  const endpoint = resolveEndpoint('upload', argv);
   const file = readFileSync(artifact.out);
   const form = new FormData();
   form.set('file', new Blob([new Uint8Array(file)], { type: 'application/zip' }), basename(artifact.out));
@@ -405,6 +420,12 @@ function resolveUploadTarget(argv: string[]): AuthoringUploadTarget {
     fail(`Unknown component upload target: ${raw}.`, 'upload.target.invalid');
   }
   return parsed.data;
+}
+
+function assertAuthoringPackageFreshness(dir: string, target: AuthoringUploadTarget): void {
+  const diagnostics = computePackageFreshnessDiagnostics(readPackageManifest(join(dir, 'package.json')), target);
+  if (diagnostics.length === 0) return;
+  fail(formatPackageFreshnessFailure(diagnostics, target), diagnostics[0]!.code);
 }
 
 async function showStatus(argv: string[]): Promise<void> {
@@ -909,6 +930,20 @@ function diagnostic(
   message: string,
 ): { code: string; severity: 'info' | 'warning' | 'error'; message: string } {
   return { code, severity, message };
+}
+
+function formatPackageFreshnessFailure(
+  diagnostics: PackageFreshnessDiagnostic[],
+  target: AuthoringUploadTarget,
+): string {
+  return [
+    `PromptFrame authoring package freshness check failed for target=${target}.`,
+    ...diagnostics.map((item) => {
+      const current = item.current ? ` current=${item.current};` : '';
+      return `${item.code}: ${item.packageName}; minimum=${item.minimum};${current} ${item.message}`;
+    }),
+    'Run promptframe upgrade . --apply, then rerun promptframe check/upload.',
+  ].join(' ');
 }
 
 function compactRecord(input: Record<string, unknown>): Record<string, string> {
