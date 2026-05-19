@@ -505,6 +505,33 @@ test('package validates a component folder and writes a platform zip artifact', 
   }
 });
 
+test('package excludes local preview cases from .promptframe while keeping canonical preview props', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-package-local-previews-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    await mkdir(path.join(componentDir, '.promptframe/local-previews'), { recursive: true });
+    await writeFile(
+      path.join(componentDir, '.promptframe/local-previews/wide.json'),
+      JSON.stringify({ marker: 'LOCAL_PREVIEW_SHOULD_NOT_SHIP' }),
+    );
+    const out = path.join(dir, 'component.zip');
+    await execFileAsync('node', [
+      cliPath,
+      'package',
+      componentDir,
+      '--out',
+      out,
+    ]);
+    const zipText = (await readFile(out)).toString('latin1');
+    assert.match(zipText, /src\/preview-props\.json/);
+    assert.doesNotMatch(zipText, /\.promptframe\/local-previews/);
+    assert.doesNotMatch(zipText, /LOCAL_PREVIEW_SHOULD_NOT_SHIP/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('preview exposes a local Remotion preview envelope without a platform endpoint', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-preview-'));
   try {
@@ -781,6 +808,22 @@ test('check and upgrade expose freshness and package floor diagnostics', async (
       change.name === '@promptframe/cli'
       && change.next === '^0.1.6'
     )));
+
+    const applied = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'upgrade',
+      componentDir,
+      '--apply',
+      '--json',
+    ])).stdout);
+    assert.equal(applied.command, 'upgrade');
+    assert.equal(applied.diagnostic.code, 'upgrade.applied');
+    assert.equal(applied.apply, true);
+    assert.ok(applied.packageChanges.some((change) => change.name === '@promptframe/contracts'));
+    const appliedPackageJson = JSON.parse(await readFile(path.join(componentDir, 'package.json'), 'utf8'));
+    assert.equal(appliedPackageJson.dependencies['@promptframe/contracts'], '^0.1.5');
+    assert.equal(appliedPackageJson.dependencies['@promptframe/component-kit'], '^0.1.6');
+    assert.equal(appliedPackageJson.devDependencies['@promptframe/cli'], '^0.1.6');
 
     await writeFile(path.join(componentDir, 'package.json'), JSON.stringify({
       name: 'fixture-component',
