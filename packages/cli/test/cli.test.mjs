@@ -750,6 +750,55 @@ test('preview exposes a local Remotion preview envelope without a platform endpo
   }
 });
 
+test('preview writes a local preview report for canonical and saved cases', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-preview-report-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    await mkdir(path.join(componentDir, '.promptframe/local-previews'), { recursive: true });
+    await writeFile(path.join(componentDir, '.promptframe/local-previews/square.json'), JSON.stringify({
+      name: 'Square stress',
+      durationFrames: 60,
+      fps: 30,
+      width: 720,
+      height: 720,
+      props: { title: 'Saved local case' },
+    }, null, 2));
+
+    const { stdout } = await execFileAsync('node', [
+      cliPath,
+      'preview',
+      componentDir,
+      '--write-local-report',
+      '--json',
+    ], {
+      env: {
+        ...process.env,
+        PROMPTFRAME_API_BASE: '',
+        REMOTION_MEDIA_API_BASE: '',
+      },
+    });
+    const payload = JSON.parse(stdout);
+    const reportPath = path.join(componentDir, '.promptframe/local-previews/preview-report.json');
+    const report = JSON.parse(await readFile(reportPath, 'utf8'));
+
+    assert.equal(payload.command, 'preview');
+    assert.equal(payload.localPreviewReport.path, reportPath);
+    assert.equal(payload.localPreviewReport.caseCount, 2);
+    assert.equal(payload.localPreviewReport.diagnostic.code, 'preview.local_report.written');
+    assert.equal(report.reportVersion, 'promptframe-local-preview-report.v1');
+    assert.equal(report.component.id, '@demo/fixture-component');
+    assert.deepEqual(report.cases.map((previewCase) => previewCase.source), [
+      'src/preview-props.json',
+      '.promptframe/local-previews/square.json',
+    ]);
+    assert.ok(report.cases.every((previewCase) => previewCase.envelopeHash.startsWith('sha256:')));
+    assert.ok(report.cases.every((previewCase) => previewCase.propsHash.startsWith('sha256:')));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('dev prepares a real Remotion Player local preview command', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-dev-'));
   try {

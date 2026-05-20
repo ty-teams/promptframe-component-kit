@@ -43,6 +43,10 @@ import {
   reusabilityDiagnostics,
   type LocalReusabilityDiagnostic,
 } from './reusability.js';
+import {
+  assertPreviewEnvelope,
+  writeLocalPreviewReport,
+} from './preview-report.js';
 
 const command = process.argv[2] ?? 'help';
 const args = process.argv.slice(3);
@@ -242,6 +246,14 @@ function preview(argv: string[]): void {
   const manifest = validateComponentDirectory(dir);
   const previewEnvelope = readPreviewProps(dir);
   const previewScript = resolveLocalPreviewScript(readPackageManifest(join(dir, 'package.json')));
+  const localPreviewReport = hasFlag(argv, '--write-local-report')
+    ? writeLocalPreviewReport({
+      dir,
+      component: manifestSummary(manifest),
+      canonicalPreview: previewEnvelope,
+      fail,
+    })
+    : undefined;
   const output = {
     command: 'preview',
     dir,
@@ -250,6 +262,7 @@ function preview(argv: string[]): void {
     previewSource: 'src/preview-props.json',
     preview: previewEnvelope,
     localDevCommand: ['npm', 'run', previewScript],
+    localPreviewReport,
     diagnostic: diagnostic('preview.ready', 'info', 'Local Remotion preview envelope is ready.'),
   };
   if (hasFlag(argv, '--json')) {
@@ -259,6 +272,7 @@ function preview(argv: string[]): void {
   console.log(`preview ready: ${dir}`);
   console.log(`Rendering system: ${output.renderingSystem}`);
   console.log(`Preview: ${previewEnvelope.width}x${previewEnvelope.height} @ ${previewEnvelope.fps}fps, ${previewEnvelope.durationFrames} frames`);
+  if (localPreviewReport) console.log(`Local preview report: ${localPreviewReport.path}`);
   console.log(`Run: npm run ${previewScript}`);
 }
 
@@ -737,41 +751,7 @@ function assertRequiredFiles(dir: string): void {
 }
 
 function validatePreviewProps(dir: string): void {
-  const preview = readPreviewProps(dir);
-  if (!preview) {
-    fail('src/preview-props.json must be a JSON object.', 'component_standard.preview.object');
-  }
-  const limits = PROMPTFRAME_PUBLIC_STANDARD_POLICY.previewLimits;
-  const allowedFps: readonly number[] = limits.allowedFps;
-  const durationFrames = Number(preview.durationFrames);
-  const width = Number(preview.width);
-  const height = Number(preview.height);
-  const fps = Number(preview.fps);
-
-  if (!Number.isInteger(durationFrames) || durationFrames <= 0) {
-    fail('preview durationFrames must be a positive integer.', 'component_standard.preview.duration_frames.positive');
-  }
-  if (durationFrames > limits.maxDurationFrames) {
-    fail(`preview durationFrames exceeds the public standard limit: ${durationFrames} > ${limits.maxDurationFrames}.`, 'component_standard.preview.duration_frames.max');
-  }
-  if (!Number.isInteger(width) || width <= 0) {
-    fail('preview width must be a positive integer.', 'component_standard.preview.width.positive');
-  }
-  if (width > limits.maxWidth) {
-    fail(`preview width exceeds the public standard limit: ${width} > ${limits.maxWidth}.`, 'component_standard.preview.width.max');
-  }
-  if (!Number.isInteger(height) || height <= 0) {
-    fail('preview height must be a positive integer.', 'component_standard.preview.height.positive');
-  }
-  if (height > limits.maxHeight) {
-    fail(`preview height exceeds the public standard limit: ${height} > ${limits.maxHeight}.`, 'component_standard.preview.height.max');
-  }
-  if (!Number.isInteger(fps) || !allowedFps.includes(fps)) {
-    fail(`preview fps must be one of: ${allowedFps.join(', ')}.`, 'component_standard.preview.fps.allowed');
-  }
-  if (!asRecord(preview.props)) {
-    fail('src/preview-props.json must include a props object.', 'component_standard.preview.props.object');
-  }
+  assertPreviewEnvelope(readPreviewProps(dir), 'src/preview-props.json', fail);
 }
 
 function readPreviewProps(dir: string): Record<string, unknown> {
@@ -1254,6 +1234,7 @@ Commands:
   check <dir>                      Validate, report rule IDs, and check standard freshness
   upgrade <dir>                    Update PromptFrame package floors (--dry-run by default)
   preview <dir>                    Validate and print local Remotion preview envelope
+    --write-local-report           Write .promptframe/local-previews/preview-report.json
   dev <dir>                        Start the local Remotion Player preview server
   package <dir> --out <zip>        Validate and package a component source zip
   upload <dir|zip>                 Upload component source package to PromptFrame
