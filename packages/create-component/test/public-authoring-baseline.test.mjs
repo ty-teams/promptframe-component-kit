@@ -14,7 +14,7 @@ test('public templates use the current PromptFrame authoring package baseline', 
     assert.equal(packageJson.dependencies?.['@promptframe/component-kit'], '^0.1.6', templatePackagePath);
     assert.equal(packageJson.dependencies?.['@promptframe/contracts'], '^0.1.5', templatePackagePath);
     assert.equal(packageJson.dependencies?.['@remotion/player'], '^4.0.0', templatePackagePath);
-    assert.equal(packageJson.devDependencies?.['@promptframe/cli'], '^0.1.10', templatePackagePath);
+    assert.equal(packageJson.devDependencies?.['@promptframe/cli'], '^0.1.17', templatePackagePath);
   }
 });
 
@@ -85,6 +85,24 @@ test('public templates include a real Remotion Player dev preview shell', async 
     assert.match(previewRoot, /@remotion\/player/, templateRoot);
     assert.match(previewRoot, /preview-props\.json/, templateRoot);
     assert.match(previewRoot, /propsSchema\.parse/, templateRoot);
+  }
+});
+
+test('public templates expose schema-derived local controls and aspect presets', async () => {
+  for (const templateRoot of [
+    'templates/react-remotion',
+    'packages/create-component/templates/react-remotion',
+  ]) {
+    const previewRoot = await readFile(path.join(repoRoot, templateRoot, 'src/PreviewRoot.tsx'), 'utf8');
+
+    assert.match(previewRoot, /useState/, templateRoot);
+    assert.match(previewRoot, /propsSchema\.safeParse/, templateRoot);
+    assert.match(previewRoot, /previewAspectPresets/, templateRoot);
+    assert.match(previewRoot, /16:9/, templateRoot);
+    assert.match(previewRoot, /9:16/, templateRoot);
+    assert.match(previewRoot, /1:1/, templateRoot);
+    assert.match(previewRoot, /Object\.entries\(inputProps\)/, templateRoot);
+    assert.match(previewRoot, /setInputProps/, templateRoot);
   }
 });
 

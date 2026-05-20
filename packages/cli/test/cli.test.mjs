@@ -662,6 +662,58 @@ test('package excludes local preview cases from .promptframe while keeping canon
   }
 });
 
+test('validate and package ignore package manager lockfiles', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-package-lockfiles-'));
+  try {
+    const componentDir = path.join(dir, 'component');
+    await writeFixtureComponent(componentDir);
+    await writeFile(path.join(componentDir, 'package-lock.json'), JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        '': {
+          name: 'fixture-component',
+          dependencies: {
+            '@promptframe/contracts': '^0.1.5',
+          },
+        },
+        'node_modules/@promptframe/contracts': {
+          resolved: 'https://registry.npmjs.org/@promptframe/contracts/-/contracts-0.1.6.tgz',
+        },
+      },
+    }, null, 2));
+    await writeFile(path.join(componentDir, 'pnpm-lock.yaml'), [
+      'lockfileVersion: "9.0"',
+      'packages:',
+      '  remotion@4.0.0:',
+      '    resolution: {integrity: sha512-demo}',
+    ].join('\n'));
+
+    const validate = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'validate',
+      componentDir,
+      '--json',
+    ])).stdout);
+    assert.equal(validate.command, 'validate');
+    assert.equal(validate.diagnostic.code, 'validate.completed');
+
+    const out = path.join(dir, 'component.zip');
+    await execFileAsync('node', [
+      cliPath,
+      'package',
+      componentDir,
+      '--out',
+      out,
+    ]);
+    const zipText = (await readFile(out)).toString('latin1');
+    assert.doesNotMatch(zipText, /package-lock\.json/);
+    assert.doesNotMatch(zipText, /pnpm-lock\.yaml/);
+    assert.doesNotMatch(zipText, /registry\.npmjs\.org/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('preview exposes a local Remotion preview envelope without a platform endpoint', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'promptframe-cli-preview-'));
   try {

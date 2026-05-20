@@ -1011,6 +1011,7 @@ function collectPackageFiles(root: string): Array<{ name: string; data: Buffer }
       if (entry.isDirectory()) {
         walk(full);
       } else if (entry.isFile()) {
+        if (isPackageManagerLockfile(entry.name)) continue;
         files.push({
           name: relative(root, full).replace(/\\/g, '/'),
           data: readFileSync(full),
@@ -1020,6 +1021,17 @@ function collectPackageFiles(root: string): Array<{ name: string; data: Buffer }
   }
   walk(root);
   return files.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function isPackageManagerLockfile(fileName: string): boolean {
+  return [
+    'package-lock.json',
+    'npm-shrinkwrap.json',
+    'pnpm-lock.yaml',
+    'yarn.lock',
+    'bun.lock',
+    'bun.lockb',
+  ].includes(fileName);
 }
 
 function buildStoredZip(files: Array<{ name: string; data: Buffer }>): Buffer {
