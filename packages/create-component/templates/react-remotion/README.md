@@ -76,7 +76,7 @@ npx promptframe status <buildId> --endpoint <promptframe-api-base>
 
 本地 `promptframe dev .` 会启动 Vite 预览壳，并在浏览器里用 Remotion Player 渲染 `src/preview-props.json`。`preview` envelope 检查读取同一个文件，确认 Remotion 预览尺寸、帧率、时长和 props 边界。它们不运行自定义 runtime，也不能替代平台 iframe preview / probe / render evidence。
 
-预览壳右侧可以临时调整 props、切换画幅，并点击 `Export case` 导出当前本地预览 JSON。建议把导出的文件保存到 `.promptframe/local-previews/<name>.json`，用于作者本地回归；该目录只作为本地草稿，不进入上传 source package，平台验收仍以 `src/preview-props.json`、schema 和服务端 admission 结果为准。
+预览壳右侧可以临时调整 props、切换画幅，并点击 `Export case` 导出当前本地预览 JSON。它还会通过 `@promptframe/component-kit/preview` 自动生成一组 bounded preview cases，包括 16:9、9:16、1:1 和基于默认 props 的文本/数字/布尔边界样本；这些样本仍会经过 `propsSchema.safeParse`，不会绕过 schema。建议把导出的文件保存到 `.promptframe/local-previews/<name>.json`，用于作者本地回归；该目录只作为本地草稿，不进入上传 source package，平台验收仍以 `src/preview-props.json`、schema 和服务端 admission 结果为准。
 
 ```bash
 npx promptframe dev .

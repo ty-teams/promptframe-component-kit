@@ -10,6 +10,7 @@ npm install @promptframe/component-kit
 
 - Standard version stamps for component metadata, sourced from `@promptframe/contracts`.
 - Preview constraints used by PromptFrame component tooling.
+- Bounded local preview case matrix helpers for aspect and default-props stress checks.
 - Timing helpers for deterministic Remotion animations.
 - Public style helpers backed by `@promptframe/contracts`.
 
@@ -25,9 +26,15 @@ export const manifest = {
 ```
 
 ```ts
-import { COMPONENT_PREVIEW_CONSTRAINTS } from '@promptframe/component-kit/preview';
+import { COMPONENT_PREVIEW_CONSTRAINTS, createPreviewCaseMatrix } from '@promptframe/component-kit/preview';
 
-export const previewSize = COMPONENT_PREVIEW_CONSTRAINTS.defaultStill;
+export const maxPreviewWidth = COMPONENT_PREVIEW_CONSTRAINTS.maxWidth;
+
+export const previewCases = createPreviewCaseMatrix({
+  basePreview: { durationFrames: 120, fps: 30, width: 1280, height: 720 },
+  baseProps: { title: 'Quarterly revenue' },
+  validateProps: (candidate) => candidate,
+});
 ```
 
 ```ts
@@ -54,7 +61,7 @@ const style = resolvePromptFrameStyle({ tone: 'tech', accentColor: '#38bdf8' }, 
 
 ```ts
 import { getComponentStandardStamp } from '@promptframe/component-kit';
-import { COMPONENT_PREVIEW_CONSTRAINTS } from '@promptframe/component-kit/preview';
+import { COMPONENT_PREVIEW_CONSTRAINTS, createPreviewCaseMatrix } from '@promptframe/component-kit/preview';
 import { createDurationTimeline } from '@promptframe/component-kit/timing';
 import { resolvePromptFrameStyle } from '@promptframe/component-kit/style';
 ```

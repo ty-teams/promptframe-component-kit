@@ -1,4 +1,5 @@
 import { Player } from '@remotion/player';
+import { createPreviewCaseMatrix, type PromptFramePreviewCase } from '@promptframe/component-kit/preview';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import Component from './Component';
@@ -7,7 +8,7 @@ import { propsSchema, type ComponentProps } from './schema';
 
 const preview = previewEnvelope as {
   durationFrames: number;
-  fps: number;
+  fps: 30;
   width: number;
   height: number;
   props?: unknown;
@@ -47,6 +48,25 @@ const initialSize: PreviewSize = matchedInitialSize
   ? { ...matchedInitialSize }
   : { label: 'Custom', width: preview.width, height: preview.height };
 const defaultPreviewCaseName = 'local-preview-case';
+const generatedPreviewCases = createPreviewCaseMatrix<ComponentProps>({
+  basePreview: {
+    durationFrames: preview.durationFrames,
+    fps: preview.fps,
+    width: preview.width,
+    height: preview.height,
+  },
+  baseProps: initialProps,
+  validateProps: (candidate) => {
+    const parsed = propsSchema.safeParse(candidate);
+    return parsed.success ? parsed.data : undefined;
+  },
+  aspectPresets: previewAspectPresets.map((preset) => ({
+    id: `aspect-${preset.label.replace(':', '-')}`,
+    name: preset.label,
+    width: preset.width,
+    height: preset.height,
+  })),
+});
 
 const root = document.getElementById('root');
 
@@ -138,6 +158,17 @@ function PreviewApp() {
     const previewCase = buildPreviewCase({ name: previewCaseName, inputProps, previewSize });
     const fileName = downloadPreviewCase(previewCase);
     setExportStatus(`Exported ${fileName}. Save it under .promptframe/local-previews/.`);
+  };
+
+  const applyGeneratedPreviewCase = (previewCase: PromptFramePreviewCase<ComponentProps>) => {
+    setInputProps(previewCase.props);
+    setPreviewSize({
+      label: previewCase.name,
+      width: previewCase.width,
+      height: previewCase.height,
+    });
+    setPreviewCaseName(previewCase.id);
+    setExportStatus(`Loaded ${previewCase.name}. Adjust props if needed, then export it as a local preview case.`);
   };
 
   return (
@@ -265,6 +296,32 @@ function PreviewApp() {
                 {exportStatus}
               </p>
             ) : null}
+            <div style={{ display: 'grid', gap: 8 }}>
+              <strong style={{ color: '#334155', fontSize: 13 }}>Auto cases</strong>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                {generatedPreviewCases.map((previewCase) => (
+                  <button
+                    data-promptframe-preview-case-apply={previewCase.id}
+                    key={previewCase.id}
+                    type="button"
+                    title={previewCase.description}
+                    onClick={() => applyGeneratedPreviewCase(previewCase)}
+                    style={{
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 6,
+                      background: '#fff',
+                      color: '#111827',
+                      font: 'inherit',
+                      fontSize: 12,
+                      padding: '8px 10px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {previewCase.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 

@@ -11,7 +11,7 @@ test('public templates use the current PromptFrame authoring package baseline', 
     'packages/create-component/templates/react-remotion/package.json',
   ]) {
     const packageJson = JSON.parse(await readFile(path.join(repoRoot, templatePackagePath), 'utf8'));
-    assert.equal(packageJson.dependencies?.['@promptframe/component-kit'], '^0.1.6', templatePackagePath);
+    assert.equal(packageJson.dependencies?.['@promptframe/component-kit'], '^0.1.7', templatePackagePath);
     assert.equal(packageJson.dependencies?.['@promptframe/contracts'], '^0.1.5', templatePackagePath);
     assert.equal(packageJson.dependencies?.['@remotion/player'], '^4.0.0', templatePackagePath);
     assert.equal(packageJson.devDependencies?.['@promptframe/cli'], '^0.1.17', templatePackagePath);
@@ -127,6 +127,22 @@ test('public templates expose saved local preview case export controls', async (
     assert.match(previewRoot, /inputProps/, templateRoot);
     assert.match(readme, /\.promptframe\/local-previews/, templateRoot);
     assert.match(readme, /导出|保存/, templateRoot);
+  }
+});
+
+test('public templates expose component-kit generated preview case matrix', async () => {
+  for (const templateRoot of [
+    'templates/react-remotion',
+    'packages/create-component/templates/react-remotion',
+  ]) {
+    const previewRoot = await readFile(path.join(repoRoot, templateRoot, 'src/PreviewRoot.tsx'), 'utf8');
+    const readme = await readFile(path.join(repoRoot, templateRoot, 'README.md'), 'utf8');
+
+    assert.match(previewRoot, /createPreviewCaseMatrix/, templateRoot);
+    assert.match(previewRoot, /data-promptframe-preview-case-apply/, templateRoot);
+    assert.match(previewRoot, /Auto cases/, templateRoot);
+    assert.match(previewRoot, /propsSchema\.safeParse/, templateRoot);
+    assert.match(readme, /自动生成.*preview cases|preview cases.*自动生成/, templateRoot);
   }
 });
 
