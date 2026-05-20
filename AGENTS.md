@@ -9,6 +9,13 @@ It may contain:
 - CLI and project scaffolding tools.
 - Public component authoring skills, templates, examples, and docs.
 
+Authoring guidance must assume an AI-first workflow:
+
+- The human user is the visual reviewer and product judge.
+- The external CodingAI or Component Author AI turns the brief, user assets, public authoring skill, platform standard API output, and CLI diagnostics into a reusable component.
+- Default external authoring targets reusable marketplace quality: clear props, responsive layout, safe defaults, deterministic diagnostics, and strict upload admission.
+- Temporary private components should use the platform `project_private_generation` lane; do not present one-off private work as marketplace-ready.
+
 It must not contain:
 
 - PromptFrame platform secrets, tokens, API keys, or private endpoints as production defaults.
